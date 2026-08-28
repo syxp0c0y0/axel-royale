@@ -18,27 +18,44 @@ python3 server.py
 
 Abre `http://localhost:8080` en el navegador. Para jugar con alguien en la misma red (wifi de casa), esa persona puede abrir `http://TU-IP-LOCAL:8080` en su propio dispositivo — la sala online funciona igual.
 
-## Jugar con alguien desde otra casa (internet)
+## Jugar con alguien desde otra casa (internet) — URL permanente
 
-Para que dos o más personas en redes distintas se conecten, el servidor necesita una URL pública. La forma más simple y gratuita:
+Para que dos o más personas en redes distintas se conecten, el servidor necesita una URL pública. **No uses un túnel rápido de Cloudflare (`cloudflared tunnel --url ...`, `trycloudflare.com`) para esto** — ese modo es intencionalmente efímero: genera un subdominio nuevo cada vez que se relanza, y no hay forma de fijarlo (así funciona el producto, no es algo que se pueda configurar). Para una URL que **nunca cambia**, hay que desplegar en una plataforma real:
 
-### Opción recomendada: Render.com
+### Render.com — un solo dominio para siempre
 
-1. Crea una cuenta gratis en [render.com](https://render.com).
-2. Sube esta carpeta a un repositorio de GitHub (puede ser privado).
-3. En Render: **New → Web Service**, conecta el repo.
-4. Configura:
-   - **Build Command:** `pip install -r requirements.txt`
-   - **Start Command:** `python server.py`
-5. Despliega. Render te da una URL pública (algo como `https://tu-juego.onrender.com`).
-6. Comparte esa URL con tus rivales — todos la abren, uno crea sala (1v1 o 2v2) y los demás se unen con el código.
+El repo ya incluye `render.yaml`, así que Render puede configurar el servicio solo.
 
-> El plan gratuito de Render "duerme" el servicio tras un rato sin uso; la primera carga después de eso tarda unos 30-50 segundos en despertar. Es normal.
+1. Crea una cuenta gratis en [render.com](https://render.com) (puedes entrar directo con tu cuenta de GitHub).
+2. Sube esta carpeta a un repositorio de GitHub:
+   ```bash
+   git remote add origin https://github.com/TU-USUARIO/axels-royale.git
+   git branch -M main
+   git push -u origin main
+   ```
+   (el repo local y el primer commit ya están hechos — solo falta crear el repo vacío en GitHub y conectarlo con esos dos comandos).
+3. En Render: **New → Blueprint**, elige ese repositorio. Render lee `render.yaml` y configura solo el build (`pip install -r requirements.txt`) y el arranque (`python server.py`) — solo hay que confirmar el nombre del servicio (ese nombre define tu URL) y darle a **Apply**.
+   - Alternativa manual si prefieres no usar el blueprint: **New → Web Service** → conecta el repo → Build Command `pip install -r requirements.txt` → Start Command `python server.py`.
+4. Cuando termine el primer deploy, Render te da una URL fija: `https://<nombre-que-elegiste>.onrender.com`. **Esa es tu URL canónica** — no vuelve a cambiar.
+5. Comparte esa URL con tus rivales — todos la abren, uno crea sala (1v1, 2v2 o Ranked con amigos) y los demás se unen con el código.
 
-### Alternativas equivalentes
+**Cómo actualizar el juego sin nunca cambiar la URL**: cada vez que quieras publicar cambios, simplemente:
+```bash
+git add -A
+git commit -m "lo que cambiaste"
+git push
+```
+Render detecta el push al repo conectado y vuelve a desplegar automáticamente **sobre el mismo servicio** — la URL sigue siendo exactamente la misma. Nunca crees un servicio nuevo en Render para una actualización; usa siempre este mismo repo/servicio.
 
-- **Railway.app** o **Fly.io** — mismo esquema (Python + `aiohttp`, comando de inicio `python server.py`).
-- **Un servidor propio / VPS** — corre `python3 server.py` (define la variable `PORT` si quieres otro puerto) detrás de Nginx o directamente expuesto.
+Las rutas internas del juego (todo vive en `static/index.html`, sin rutas de servidor adicionales aparte de `/` y `/ws`) ya sirven todas desde ese único dominio — no hay múltiples deployments que coordinar.
+
+> El plan gratuito de Render "duerme" el servicio tras un rato sin uso; la primera carga después de eso tarda unos 30-50 segundos en despertar. Es normal, y no afecta la URL.
+
+### Alternativas equivalentes (mismo principio: un dominio fijo por servicio)
+
+- **Railway.app** o **Fly.io** — mismo esquema (Python + `aiohttp`, comando de inicio `python server.py`), también con una URL de producción fija por proyecto que no cambia entre despliegues.
+- **Túnel con nombre de Cloudflare + dominio propio**: si ya tienes un dominio, un *named tunnel* de Cloudflare (no el modo "quick") ligado a una cuenta sí puede mapearse permanentemente a `axels-royale.tudominio.com` — a diferencia del túnel rápido, este no cambia de hostname.
+- **Un servidor propio / VPS** — corre `python3 server.py` (define la variable `PORT` si quieres otro puerto) detrás de Nginx o directamente expuesto; el dominio lo defines tú y es fijo por naturaleza.
 
 ## Modos de juego
 
