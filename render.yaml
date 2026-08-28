@@ -1,0 +1,7 @@
+services:
+  - type: web
+    name: axels-royale
+    runtime: python
+    plan: free
+    buildCommand: pip install -r requirements.txt
+    startCommand: python server.py

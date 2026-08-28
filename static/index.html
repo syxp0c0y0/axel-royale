@@ -1,0 +1,3415 @@
+<meta charset="UTF-8">
+<title>Axel's Royale</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Rajdhani:wght@500;600;700&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+
+<style>
+:root{
+  --bg:#0b0e14;
+  --surface:#131824;
+  --surface2:#1a2130;
+  --line:#232b3c;
+  --ink:#e9edf5;
+  --muted:#8b95aa;
+  --accent:#ff6a3d;
+  --accent-ink:#2a1206;
+  --build:#4fd1c5;
+  --build-ink:#04211d;
+  --danger:#ff3b5c;
+  --gold:#ffcf5c;
+  --wall:#7fa8ff;
+  --floor:#4fd1c5;
+  --ramp:#c98bff;
+  --cone:#ffb454;
+  --shield:#39c7ff;
+  --heal:#6bffa0;
+}
+:root[data-theme="light"]{
+  --bg:#0b0e14; --surface:#131824; --surface2:#1a2130; --line:#232b3c; --ink:#e9edf5; --muted:#8b95aa;
+}
+
+*{box-sizing:border-box;}
+html,body{
+  margin:0; padding:0; width:100%; height:100%; overflow:hidden;
+  background:var(--bg); color:var(--ink);
+  font-family:'Inter',system-ui,sans-serif;
+  -webkit-font-smoothing:antialiased;
+}
+#game{display:block; position:fixed; inset:0; width:100%; height:100%; cursor:crosshair;}
+
+.hud-font{font-family:'Rajdhani',system-ui,sans-serif; font-weight:600; letter-spacing:.02em;}
+
+/* ---------- top-left status ---------- */
+#topLeft{
+  position:fixed; top:16px; left:16px; z-index:5;
+  display:flex; flex-direction:column; gap:8px; width:min(260px,42vw);
+  pointer-events:none;
+}
+.bar-row{display:flex; align-items:center; gap:8px;}
+.bar-label{width:34px; font-size:12px; color:var(--muted); text-transform:uppercase; letter-spacing:.08em;}
+.bar-track{flex:1; height:14px; background:var(--surface); border:1px solid var(--line); border-radius:4px; overflow:hidden; position:relative;}
+.bar-fill{height:100%; border-radius:3px; transition:width .12s ease;}
+.bar-fill.hp{background:linear-gradient(90deg,#ff8a5c,var(--accent));}
+.bar-fill.shield{background:linear-gradient(90deg,#8fe3ff,var(--shield));}
+.bar-fill.mats{background:linear-gradient(90deg,#7be8dd,var(--build));}
+.bar-row.shield-row{transition:opacity .2s; }
+.bar-row.shield-row.empty{opacity:.35;}
+.bar-num{position:absolute; right:6px; top:-1px; font-family:'Rajdhani'; font-weight:700; font-size:11px; color:var(--ink); text-shadow:0 1px 2px rgba(0,0,0,.6); font-variant-numeric:tabular-nums;}
+
+/* ---------- top-right score ---------- */
+#topRight{
+  position:fixed; top:16px; right:16px; z-index:5; text-align:right; pointer-events:none;
+}
+#scoreLine{font-family:'Rajdhani'; font-weight:700; font-size:15px; letter-spacing:.06em; color:var(--muted); text-transform:uppercase;}
+#scoreTally{display:flex; gap:6px; justify-content:flex-end; margin-top:6px;}
+#connStatus{font-family:'Rajdhani'; font-weight:600; font-size:11px; letter-spacing:.05em; margin-top:4px;}
+#connStatus.ok{color:var(--build);}
+#connStatus.bad{color:var(--danger);}
+
+/* ---------- ranked HUD ---------- */
+#rankedHud{
+  position:fixed; top:16px; right:16px; z-index:5; text-align:right; pointer-events:none;
+  background:rgba(19,24,36,.85); border:1px solid var(--line); border-radius:10px; padding:10px 14px;
+}
+#rankedPointsLine{font-family:'Rajdhani'; font-weight:700; font-size:14px; letter-spacing:.05em; color:var(--gold); text-transform:uppercase;}
+#rankedPointsLine span{font-variant-numeric:tabular-nums;}
+#rankedStatsRow{display:flex; gap:14px; justify-content:flex-end; margin-top:8px;}
+.rk-stat{display:flex; flex-direction:column; align-items:center; font-family:'Rajdhani';}
+.rk-stat .v{font-size:18px; font-weight:700; color:var(--ink); font-variant-numeric:tabular-nums;}
+.rk-stat .l{font-size:9px; color:var(--muted); text-transform:uppercase; letter-spacing:.05em;}
+#rankedMatchGain{font-family:'Rajdhani'; font-weight:600; font-size:11px; color:var(--build); margin-top:6px;}
+#mapNameTag{
+  position:fixed; top:16px; left:50%; transform:translateX(-50%); z-index:5;
+  font-family:'Rajdhani'; font-weight:600; font-size:11px; letter-spacing:.1em; text-transform:uppercase;
+  color:var(--muted); background:rgba(19,24,36,.7); border:1px solid var(--line); border-radius:20px;
+  padding:4px 14px; pointer-events:none;
+}
+.tag{
+  font-family:'Rajdhani'; font-weight:700; font-size:13px; padding:3px 10px;
+  border-radius:3px; border:1px solid var(--line); background:var(--surface);
+  font-variant-numeric:tabular-nums;
+}
+.tag.me{color:var(--accent); border-color:#4a2d1e;}
+.tag.bot{color:var(--danger); border-color:#4a1e28;}
+
+/* ---------- crosshair ---------- */
+#crosshair{
+  position:fixed; top:50%; left:50%; width:20px; height:20px; margin:-10px 0 0 -10px;
+  pointer-events:none; z-index:4;
+}
+#crosshair::before,#crosshair::after{content:''; position:absolute; background:var(--ink); opacity:.85;}
+#crosshair::before{ left:9px; top:2px; width:2px; height:6px; }
+#crosshair::after{ left:9px; bottom:2px; width:2px; height:6px; }
+.chdot{position:absolute; left:9px; top:9px; width:2px; height:2px; background:var(--accent);}
+
+/* ---------- action bar ---------- */
+#actionBar{
+  position:fixed; bottom:14px; left:50%; transform:translateX(-50%); z-index:5;
+  display:flex; gap:clamp(2px,0.8vw,6px); padding:clamp(3px,0.8vw,6px);
+  background:rgba(19,24,36,.85); max-width:98vw;
+  border:1px solid var(--line); border-radius:10px; backdrop-filter:blur(6px);
+}
+.slot{
+  width:clamp(30px,5.8vw,54px); height:clamp(30px,5.8vw,54px); border-radius:6px; background:var(--surface2);
+  border:1px solid var(--line); position:relative; display:flex; flex-direction:column;
+  align-items:center; justify-content:center; color:var(--muted); transition:border-color .1s, transform .1s;
+  flex:0 0 auto;
+}
+.slot .k{font-family:'Rajdhani'; font-weight:700; font-size:clamp(12px,2.4vw,18px); line-height:1; color:var(--ink);}
+.slot .n{font-size:clamp(6px,1.2vw,8px); text-transform:uppercase; letter-spacing:.05em; margin-top:3px; text-align:center;}
+.slot .sub{position:absolute; bottom:1px; right:3px; font-family:'Rajdhani'; font-weight:700; font-size:clamp(7px,1.4vw,10px); font-variant-numeric:tabular-nums;}
+.slot.active{border-color:var(--accent); transform:translateY(-3px); box-shadow:0 4px 14px rgba(255,106,61,.25);}
+.slot.build.active{border-color:var(--build); box-shadow:0 4px 14px rgba(79,209,197,.25);}
+.slot.consumable.active{border-color:var(--shield); box-shadow:0 4px 14px rgba(57,199,255,.25);}
+.slot.empty .k{color:var(--danger);}
+.slot .icon{width:60%; height:60%; display:block;}
+.slot.empty .icon{opacity:.35;}
+.divider{width:1px; background:var(--line); margin:4px 1px; flex:0 0 auto;}
+@media (max-width:480px){ .slot .n{display:none;} }
+
+/* ---------- help panel ---------- */
+#helpBtn{
+  position:fixed; bottom:16px; right:16px; z-index:6; width:32px; height:32px; border-radius:50%;
+  background:var(--surface); border:1px solid var(--line); color:var(--muted);
+  font-family:'Rajdhani'; font-weight:700; display:flex; align-items:center; justify-content:center;
+  cursor:pointer; user-select:none;
+}
+#helpPanel{
+  position:fixed; bottom:60px; right:16px; z-index:6; width:230px; padding:14px 16px;
+  background:var(--surface); border:1px solid var(--line); border-radius:8px; font-size:12.5px;
+  color:var(--muted); display:none; line-height:1.65;
+}
+#helpPanel.show{display:block;}
+#helpPanel b{color:var(--ink); font-weight:600;}
+#helpPanel .htitle{font-family:'Rajdhani'; font-weight:700; color:var(--ink); text-transform:uppercase; letter-spacing:.06em; font-size:12px; margin-bottom:6px;}
+
+/* ---------- overlays ---------- */
+.overlay{
+  position:fixed; inset:0; z-index:20; display:flex; align-items:center; justify-content:center;
+  background:radial-gradient(ellipse at 50% 30%, #161c2a 0%, #0b0e14 75%);
+  overflow-y:auto; padding:24px 0;
+}
+.overlay .panel{margin:auto;} /* keeps content scrollable-to-the-top even while flex-centered */
+.hidden{display:none !important;}
+.panel{
+  width:min(560px,92vw); padding:40px 36px; text-align:center;
+}
+.eyebrow{
+  font-family:'Rajdhani'; font-weight:700; letter-spacing:.35em; font-size:12px; color:var(--build);
+  text-transform:uppercase; margin-bottom:10px;
+}
+h1.title{
+  font-family:'Rajdhani'; font-weight:700; font-size:clamp(40px,8vw,68px); margin:0 0 6px;
+  letter-spacing:.01em; text-wrap:balance; line-height:.95;
+  background:linear-gradient(180deg,#fff,var(--accent) 140%);
+  -webkit-background-clip:text; background-clip:text; color:transparent;
+}
+.sub{color:var(--muted); font-size:15px; margin:0 0 30px;}
+.modes{display:grid; grid-template-columns:1fr 1fr; gap:10px; margin-bottom:14px;}
+.modes.four{grid-template-columns:repeat(2,1fr);}
+.mode-btn{
+  font-family:'Rajdhani'; font-weight:600; font-size:16px; letter-spacing:.02em;
+  padding:16px 10px; border-radius:8px; border:1px solid var(--line); background:var(--surface);
+  color:var(--ink); cursor:pointer; transition:border-color .15s, background .15s, transform .1s;
+  width:100%;
+}
+.mode-btn:hover{border-color:var(--accent); background:var(--surface2); transform:translateY(-2px);}
+.mode-btn:disabled{opacity:.45; cursor:not-allowed; transform:none;}
+.mode-btn .d{display:block; font-family:'Inter'; font-weight:400; font-size:11px; color:var(--muted); margin-top:4px; text-transform:none; letter-spacing:0;}
+.online-btn{border-color:var(--build); margin-bottom:22px;}
+.online-btn:hover{border-color:var(--build);}
+.ranked-btn{border-color:var(--gold); margin-bottom:14px; font-size:18px;}
+.ranked-btn:hover{border-color:var(--gold);}
+#rankedRankCard{
+  display:flex; align-items:center; gap:16px; background:var(--surface); border:1px solid var(--line);
+  border-radius:10px; padding:16px; margin-bottom:18px;
+}
+#rankedMenuInfo{flex:1; text-align:left;}
+#rankedMenuTierName{font-family:'Rajdhani'; font-weight:700; font-size:18px; margin-bottom:6px;}
+#rankedMenuProgressLabel{font-family:'Rajdhani'; font-size:12px; color:var(--muted); margin-top:4px;}
+#rankedLeaderboardWrap{overflow-x:auto;}
+#rankedLeaderboard{width:100%; border-collapse:collapse; font-family:'Rajdhani'; font-size:13px;}
+#rankedLeaderboard th{
+  text-align:left; color:var(--muted); text-transform:uppercase; font-size:10px; letter-spacing:.06em;
+  padding:6px 8px; border-bottom:1px solid var(--line);
+}
+#rankedLeaderboard td{padding:8px; border-bottom:1px solid var(--line); font-weight:600;}
+#rankedLeaderboard td:first-child{color:var(--gold); font-weight:700;}
+.tips{display:flex; gap:8px; justify-content:center; flex-wrap:wrap;}
+.tip{
+  font-family:'Rajdhani'; font-size:12px; font-weight:600; color:var(--muted);
+  border:1px solid var(--line); border-radius:20px; padding:5px 12px; background:var(--surface);
+}
+.tip b{color:var(--build);}
+
+/* ---------- top nav / profile summary ---------- */
+.topnav-row{display:flex; gap:10px; justify-content:center; margin-bottom:18px;}
+.topnav-card{
+  font-family:'Rajdhani'; background:var(--surface); border:1px solid var(--line); border-radius:8px;
+  padding:8px 18px; display:flex; flex-direction:column; align-items:center; min-width:84px;
+}
+.topnav-card .v{font-size:22px; font-weight:700; color:var(--gold); font-variant-numeric:tabular-nums;}
+.topnav-card .l{font-size:10px; color:var(--muted); letter-spacing:.08em;}
+.back-btn{
+  width:auto; padding:8px 16px; margin-bottom:16px; font-size:13px;
+  position:sticky; top:0; z-index:2; background:var(--surface);
+}
+#mainMenuView, #customizeView, #shopView, #profileView, #onlineLobbyView, #topNavView, #rankedView{
+  max-height:78vh; overflow-y:auto; padding:1px 2px 4px;
+}
+
+/* ---------- customize / shop / profile ---------- */
+#custPreviewWrap, #profileEquippedWrap{display:flex; justify-content:center; margin-bottom:14px;}
+#nameFieldWrap{margin-bottom:16px; text-align:left;}
+#nameInput{
+  width:100%; font-family:'Rajdhani'; font-weight:700; font-size:16px; letter-spacing:.03em;
+  background:var(--surface2); border:1px solid var(--line); border-radius:8px; color:var(--ink);
+  padding:9px 12px;
+}
+#nameInput:focus{outline:none; border-color:var(--build);}
+#profileNameLine{font-family:'Rajdhani'; font-weight:700; font-size:18px; text-align:center; margin-bottom:12px; color:var(--ink);}
+#custPreview, #profilePreview{
+  display:block; background:radial-gradient(circle,#1a2130,#0e1320); border-radius:12px; border:1px solid var(--line);
+}
+#custPreview{width:140px; height:140px;}
+#profilePreview{width:120px; height:120px;}
+.cust-section-label{
+  font-family:'Rajdhani'; font-weight:700; font-size:12px; letter-spacing:.15em; color:var(--muted);
+  text-align:left; margin:14px 0 8px; text-transform:uppercase;
+}
+.cosmetic-grid{
+  display:grid; grid-template-columns:repeat(auto-fill,minmax(96px,1fr)); gap:10px;
+  padding:2px;
+}
+.cosmetic-card{
+  background:var(--surface); border:2px solid var(--line); border-radius:10px; padding:10px 8px;
+  display:flex; flex-direction:column; align-items:center; gap:6px; cursor:pointer; position:relative;
+  transition:border-color .15s, transform .1s;
+}
+.cosmetic-card:hover{transform:translateY(-2px);}
+.cosmetic-card.equipped{border-color:var(--build); box-shadow:0 0 0 1px var(--build) inset;}
+.cosmetic-card .swatch{width:40px; height:40px; border-radius:50%; border:2px solid rgba(255,255,255,.15);}
+.cosmetic-card .cname{font-family:'Rajdhani'; font-size:12px; font-weight:600; text-align:center; line-height:1.2;}
+.cosmetic-card .crarity{font-size:9px; font-weight:700; text-transform:uppercase; letter-spacing:.06em;}
+.cosmetic-card .cprice{font-family:'Rajdhani'; font-size:12px; font-weight:700; color:var(--gold);}
+.cosmetic-card .lockdot{position:absolute; top:6px; right:6px; font-size:12px; opacity:.6;}
+.cosmetic-card .equipbadge{position:absolute; top:6px; left:6px; font-size:9px; color:var(--build); font-weight:700;}
+.shop-grid .cosmetic-card{cursor:default;}
+
+/* Rank-halo swatch: wider than the circular color/hat swatch (a halo ring reads badly
+   clipped to a circle), animated via CSS so the locker preview doesn't need a JS loop. */
+.cosmetic-card .swatch.halo-swatch{
+  width:64px; height:44px; border-radius:12px; border:none;
+  background:radial-gradient(ellipse at center, rgba(255,255,255,.05), transparent 70%);
+  overflow:visible;
+}
+.cosmetic-card .halo-swatch svg{ overflow:visible; transition:transform .25s ease; }
+.cosmetic-card:hover .halo-swatch svg{ transform:scale(1.18); }
+@keyframes haloSpin{ from{transform:rotate(0deg);} to{transform:rotate(360deg);} }
+@keyframes haloSpinRev{ from{transform:rotate(0deg);} to{transform:rotate(-360deg);} }
+@keyframes haloPulseGlow{ 0%,100%{opacity:.55;} 50%{opacity:1;} }
+@keyframes haloTwinkle{ 0%,100%{opacity:.2; transform:scale(.75);} 50%{opacity:1; transform:scale(1.2);} }
+@keyframes haloFall{ 0%{transform:translateY(-3px); opacity:0;} 15%{opacity:1;} 100%{transform:translateY(9px); opacity:0;} }
+@keyframes haloFlashCard{ 0%,88%,100%{opacity:0;} 92%{opacity:.9;} }
+.halo-ring-spin{ animation:haloSpin 6s linear infinite; }
+.halo-ring-spin-rev{ animation:haloSpinRev 4.5s linear infinite; }
+.halo-ring-spin-fast{ animation:haloSpin 3s linear infinite; }
+.halo-glow{ animation:haloPulseGlow 2.2s ease-in-out infinite; transform-origin:center; }
+.halo-twinkle{ transform-origin:center; animation:haloTwinkle 1.6s ease-in-out infinite; }
+.halo-fall{ animation:haloFall 2.4s linear infinite; }
+.halo-flash{ animation:haloFlashCard 3.6s ease-in-out infinite; }
+.shop-balance{
+  font-family:'Rajdhani'; font-weight:700; font-size:16px; color:var(--gold); margin-bottom:14px;
+  letter-spacing:.05em;
+}
+.buy-btn, .equip-btn{
+  font-family:'Rajdhani'; font-weight:700; font-size:11px; letter-spacing:.04em; text-transform:uppercase;
+  padding:5px 10px; border-radius:5px; border:none; cursor:pointer; width:100%;
+}
+.buy-btn{background:var(--gold); color:#2a1e06;}
+.buy-btn:disabled{background:var(--line); color:var(--muted); cursor:not-allowed;}
+.equip-btn{background:var(--build); color:var(--build-ink);}
+.equip-btn.equipped{background:var(--surface2); color:var(--build); border:1px solid var(--build);}
+.profile-stat-grid{display:grid; grid-template-columns:repeat(auto-fit,minmax(90px,1fr)); gap:10px; margin-bottom:8px;}
+.profile-stat{
+  background:var(--surface); border:1px solid var(--line); border-radius:8px; padding:12px 6px;
+  display:flex; flex-direction:column; align-items:center; font-family:'Rajdhani';
+}
+.profile-stat .v{font-size:24px; font-weight:700; color:var(--ink); font-variant-numeric:tabular-nums;}
+.profile-stat .l{font-size:10px; color:var(--muted); letter-spacing:.05em; text-transform:uppercase; margin-top:2px;}
+
+#eliminationToast{
+  position:fixed; top:90px; left:50%; transform:translateX(-50%) translateY(-10px); z-index:6;
+  font-family:'Rajdhani'; font-weight:700; font-size:16px; letter-spacing:.03em;
+  background:rgba(19,24,36,.92); border:1px solid var(--gold); color:var(--gold);
+  padding:8px 20px; border-radius:20px; opacity:0; pointer-events:none; transition:opacity .25s, transform .25s;
+}
+#eliminationToast.show{opacity:1; transform:translateX(-50%) translateY(0);}
+
+/* ---------- mini chat (menu only) ---------- */
+#miniChat{
+  position:fixed; bottom:16px; right:58px; z-index:21; width:170px;
+  font-family:'Inter'; opacity:.82; transition:opacity .15s;
+}
+#miniChat:hover, #miniChat:focus-within{opacity:1;}
+#miniChatLog{
+  font-size:10px; color:var(--muted); text-transform:uppercase; letter-spacing:.08em;
+  margin-bottom:4px; padding-left:2px;
+}
+#miniChatRow{display:flex; gap:5px;}
+#miniChatInput{
+  flex:1; min-width:0; font-family:'Inter'; font-size:12px; background:var(--surface);
+  border:1px solid var(--line); border-radius:14px; color:var(--ink); padding:6px 12px;
+}
+#miniChatInput:focus{outline:none; border-color:var(--line);}
+#miniChatInput::placeholder{color:var(--muted);}
+#miniChatSend{
+  width:28px; height:28px; border-radius:50%; border:1px solid var(--line); background:var(--surface);
+  color:var(--muted); cursor:pointer; font-size:12px; flex:0 0 auto;
+}
+#miniChatSend:hover{color:var(--ink);}
+
+#endPanel h1.title{background:linear-gradient(180deg,#fff,var(--gold) 140%); -webkit-background-clip:text; background-clip:text;}
+#endPanel.lose h1.title{background:linear-gradient(180deg,#fff,var(--danger) 140%); -webkit-background-clip:text; background-clip:text;}
+.again-btn{
+  font-family:'Rajdhani'; font-weight:700; font-size:16px; letter-spacing:.04em; text-transform:uppercase;
+  padding:14px 34px; border-radius:8px; border:none; background:var(--accent); color:var(--accent-ink);
+  cursor:pointer; margin-top:8px;
+}
+.again-btn:hover{filter:brightness(1.08);}
+.end-actions{display:flex; flex-direction:column; align-items:center; gap:10px;}
+.end-actions #endMenuBtn{width:auto; padding:10px 28px; font-size:14px; margin:0;}
+
+/* ---------- ranked results ---------- */
+#rkPointsBreakdown{
+  background:var(--surface); border:1px solid var(--line); border-radius:10px;
+  padding:14px 18px; margin:0 0 22px; text-align:left;
+}
+.rk-line{display:flex; justify-content:space-between; font-family:'Rajdhani'; font-size:14px; padding:4px 0; color:var(--muted);}
+.rk-line span:last-child{font-weight:700; color:var(--ink); font-variant-numeric:tabular-nums;}
+.rk-line.total{border-top:1px solid var(--line); margin-top:6px; padding-top:8px; font-size:17px;}
+.rk-line.total span{color:var(--gold) !important; font-weight:700;}
+#rkRankBadgeRow{display:flex; align-items:center; gap:16px; margin-bottom:8px;}
+.rk-badge{width:56px; height:56px; flex:0 0 auto;}
+#rkProgressWrap{flex:1; text-align:left;}
+#rkTierName{font-family:'Rajdhani'; font-weight:700; font-size:15px; letter-spacing:.04em; margin-bottom:5px;}
+.rk-track{height:10px; background:var(--surface2); border:1px solid var(--line); border-radius:5px; overflow:hidden;}
+.rk-fill{height:100%; border-radius:4px; transition:width .9s cubic-bezier(.2,.8,.2,1); width:0%;}
+#rkProgressLabel{font-family:'Rajdhani'; font-size:11px; color:var(--muted); margin-top:4px;}
+#rankUpBanner{
+  margin:14px 0 4px; padding:12px; border-radius:10px; border:1px solid var(--gold);
+  background:rgba(255,209,102,.08); opacity:0; transform:scale(.9); transition:opacity .4s, transform .4s;
+}
+#rankUpBanner.show{opacity:1; transform:scale(1);}
+.rankup-title{font-family:'Rajdhani'; font-weight:700; font-size:20px; letter-spacing:.08em; color:var(--gold);}
+.rankup-sub{font-family:'Rajdhani'; font-weight:600; font-size:14px; color:var(--ink); margin-top:2px;}
+.stat-row{display:flex; justify-content:center; gap:28px; margin:20px 0 26px;}
+.stat{font-family:'Rajdhani';}
+.stat .v{font-size:30px; font-weight:700; font-variant-numeric:tabular-nums;}
+.stat .l{font-size:11px; color:var(--muted); text-transform:uppercase; letter-spacing:.08em;}
+
+#lowhp{position:fixed; inset:0; z-index:3; pointer-events:none; box-shadow:inset 0 0 0 0 rgba(255,59,92,0); transition:box-shadow .2s;}
+#feedbackPulse{position:fixed; inset:0; z-index:3; pointer-events:none; opacity:0; transition:opacity .35s ease-out;}
+#feedbackPulse.show{opacity:1; transition:opacity .05s;}
+
+/* ---------- online lobby ---------- */
+#lobbyBody{display:flex; flex-direction:column; gap:10px; margin-top:6px;}
+#lobbyRow, #rankedLobbyRow{display:flex; gap:8px;}
+#roomCodeInput, #rankedRoomCodeInput{
+  flex:1; font-family:'Rajdhani'; font-weight:700; font-size:18px; letter-spacing:.15em; text-transform:uppercase;
+  text-align:center; background:var(--surface2); border:1px solid var(--line); border-radius:8px; color:var(--ink);
+  padding:0 10px; min-width:0;
+}
+#roomCodeInput:focus, #rankedRoomCodeInput:focus{outline:none; border-color:var(--build);}
+#roomCodeInput::placeholder, #rankedRoomCodeInput::placeholder{color:var(--muted); letter-spacing:.05em;}
+.code-display{
+  font-family:'Rajdhani'; font-weight:700; font-size:44px; letter-spacing:.25em; color:var(--build);
+  margin:14px 0 4px; font-variant-numeric:tabular-nums;
+}
+#lobbyStatus{min-height:20px;}
+
+@media (prefers-reduced-motion: reduce){
+  .mode-btn, .slot, .bar-fill{transition:none;}
+}
+</style>
+
+<canvas id="game"></canvas>
+<div id="lowhp"></div>
+<div id="feedbackPulse"></div>
+<div id="eliminationToast"></div>
+<div id="crosshair"><div class="chdot"></div></div>
+
+<div id="topLeft">
+  <div class="bar-row"><span class="bar-label hud-font">VIDA</span>
+    <div class="bar-track"><div class="bar-fill hp" id="hpFill" style="width:100%"></div><span class="bar-num" id="hpNum">100</span></div>
+  </div>
+  <div class="bar-row shield-row empty" id="shieldRow"><span class="bar-label hud-font">ESC.</span>
+    <div class="bar-track"><div class="bar-fill shield" id="shieldFill" style="width:0%"></div><span class="bar-num" id="shieldNum">0</span></div>
+  </div>
+  <div class="bar-row"><span class="bar-label hud-font">MAT.</span>
+    <div class="bar-track"><div class="bar-fill mats" id="matsFill" style="width:66%"></div><span class="bar-num" id="matsNum">200</span></div>
+  </div>
+</div>
+
+<div id="topRight">
+  <div id="scoreLine">Primero a 5</div>
+  <div id="scoreTally">
+    <span class="tag me" id="tagMe">TÚ 0</span>
+    <span class="tag bot" id="tagBot">BOT 0</span>
+  </div>
+  <div id="connStatus"></div>
+</div>
+
+<div id="rankedHud" class="hidden">
+  <div id="rankedPointsLine">RANKED POINTS: <span id="rkPoints">0</span></div>
+  <div id="rankedStatsRow">
+    <div class="rk-stat"><span class="v" id="rkKills">0</span><span class="l">Bajas</span></div>
+    <div class="rk-stat"><span class="v" id="rkPlayersLeft">0</span><span class="l">Jugadores</span></div>
+    <div class="rk-stat"><span class="v" id="rkTeamsLeft">0</span><span class="l">Equipos</span></div>
+  </div>
+  <div id="rankedMatchGain">+0 esta partida</div>
+</div>
+<div id="mapNameTag" class="hidden"></div>
+
+<div id="actionBar"></div>
+
+<div id="helpBtn">?</div>
+<div id="helpPanel">
+  <div class="htitle">Controles</div>
+  <div><b>WASD</b> mover · <b>Shift</b> correr</div>
+  <div><b>Ratón</b> apuntar · <b>clic izq.</b> disparar</div>
+  <div><b>Clic der.</b> picar / demoler</div>
+  <div><b>1–5</b> armas · <b>rueda</b> cambia arma</div>
+  <div><b>Q</b> construir muro · <b>6 7</b> mini escudo / botiquín</div>
+  <div><b>Espacio</b> recargar · <b>Esc</b> pausa</div>
+  <div style="margin-top:8px">El muro bloquea balas y movimiento — cuesta materiales y tiene vida propia.</div>
+</div>
+
+<div class="overlay" id="startScreen">
+  <div class="panel">
+    <div class="eyebrow" id="topEyebrow">CONSTRUCCIÓN Y COMBATE</div>
+    <h1 class="title">AXEL'S ROYALE</h1>
+
+    <div id="topNavView">
+      <p class="sub">Levanta muros al instante, tiende rampas, cierra el paso con conos. Sobrevive, gana monedas, personaliza tu personaje.</p>
+      <div class="topnav-row">
+        <div class="topnav-card"><span class="v" id="navCoins">0</span><span class="l">MONEDAS</span></div>
+        <div class="topnav-card"><span class="v" id="navKills">0</span><span class="l">BAJAS</span></div>
+        <div class="topnav-card"><span class="v" id="navWins">0</span><span class="l">VICTORIAS</span></div>
+      </div>
+      <button class="mode-btn nav-btn ranked-btn" data-nav="ranked" id="rankedNavBtn">
+        <span id="rankedNavRankName">RANKED · BRONZE</span>
+        <span class="d">Battle Royale contra bots — Solo, Dúos o Tríos</span>
+      </button>
+      <div class="modes four" id="topNavGrid">
+        <button class="mode-btn nav-btn" data-nav="play">JUGAR<span class="d">Elige un modo y entra a la arena</span></button>
+        <button class="mode-btn nav-btn" data-nav="customize">CUSTOMIZE<span class="d">Color y sombrero de tu personaje</span></button>
+        <button class="mode-btn nav-btn" data-nav="shop">ITEM SHOP<span class="d">Gasta tus monedas en cosméticos</span></button>
+        <button class="mode-btn nav-btn" data-nav="profile">PROFILE<span class="d">Tus estadísticas y colección</span></button>
+      </div>
+    </div>
+
+    <div id="rankedView" class="hidden">
+      <button class="mode-btn back-btn" data-nav="top">← VOLVER</button>
+      <div id="rankedRankCard">
+        <div class="rk-badge" id="rankedMenuBadge"></div>
+        <div id="rankedMenuInfo">
+          <div id="rankedMenuTierName">Bronze</div>
+          <div class="rk-track"><div class="rk-fill" id="rankedMenuFill"></div></div>
+          <div id="rankedMenuProgressLabel"></div>
+        </div>
+      </div>
+      <div class="cust-section-label">SOLO CON BOTS</div>
+      <div class="modes" style="grid-template-columns:repeat(3,1fr); margin-bottom:18px;">
+        <button class="mode-btn" data-ranked="rankedSolo">SOLO<span class="d">Tú contra 15 rivales individuales</span></button>
+        <button class="mode-btn" data-ranked="rankedDuos">DÚOS<span class="d">Tú + 1 aliado bot vs 7 equipos de 2</span></button>
+        <button class="mode-btn" data-ranked="rankedTrios">TRÍOS<span class="d">Tú + 2 aliados bot vs 5 equipos de 3</span></button>
+      </div>
+
+      <div class="cust-section-label">JUGAR CON AMIGOS (mismo equipo, contra bots)</div>
+      <div class="modes" style="grid-template-columns:1fr 1fr; margin-bottom:8px;">
+        <button class="mode-btn" id="createRankedDuosBtn">DÚOS CON AMIGO<span class="d">Sala para 2 jugadores reales</span></button>
+        <button class="mode-btn" id="createRankedTriosBtn">TRÍOS CON AMIGOS<span class="d">Sala para 3 jugadores reales</span></button>
+      </div>
+      <div id="rankedLobbyRow">
+        <input id="rankedRoomCodeInput" maxlength="8" placeholder="CÓDIGO DE SALA">
+        <button class="mode-btn" id="joinRankedRoomBtn" style="width:auto; white-space:nowrap;">UNIRSE</button>
+      </div>
+      <div class="code-display hidden" id="rankedRoomCodeDisplay"></div>
+      <div class="sub" id="rankedLobbyStatus" style="margin:6px 0 18px; min-height:20px;"></div>
+
+      <div class="cust-section-label">LEADERBOARD</div>
+      <div id="rankedLeaderboardWrap">
+        <table id="rankedLeaderboard">
+          <thead><tr><th>#</th><th>Nombre</th><th>Puntos</th><th>Rango</th><th>Victorias</th><th>Bajas</th></tr></thead>
+          <tbody id="rankedLeaderboardBody"></tbody>
+        </table>
+        <p class="sub" style="font-size:11px; margin:8px 0 0;">Por ahora solo se guardan las partidas que jugaste desde este navegador — cuando alguien juegue contigo, su progreso se guarda en su propio navegador, no aquí.</p>
+      </div>
+    </div>
+
+    <div id="mainMenuView" class="hidden">
+      <button class="mode-btn back-btn" data-nav="top">← VOLVER</button>
+      <p class="sub">Levanta muros al instante, tiende rampas, cierra el paso con conos. El que dispare y construya mejor gana el duelo.</p>
+      <button class="mode-btn online-btn" id="onlineBtn">MULTIJUGADOR ONLINE<span class="d">Crea o únete a una sala y juega con alguien desde otra casa</span></button>
+      <div class="modes four" id="modeGrid">
+        <button class="mode-btn" data-mode="practice">PRÁCTICA LIBRE<span class="d">Sin rival · munición y materiales infinitos</span></button>
+        <button class="mode-btn" data-mode="easy">1V1 · BOT FÁCIL<span class="d">Reacciones lentas, poca puntería</span></button>
+        <button class="mode-btn" data-mode="normal">1V1 · BOT NORMAL<span class="d">Construye y ataca con criterio</span></button>
+        <button class="mode-btn" data-mode="hard">1V1 · BOT DIFÍCIL<span class="d">Puntería alta, se cubre sin parar</span></button>
+        <button class="mode-btn" data-mode="2v2normal">2V2 · CONTRA BOTS<span class="d">Tú + 1 aliado bot vs 2 bots rivales</span></button>
+      </div>
+      <div class="tips">
+        <span class="tip"><b>Q</b> construir muro</span>
+        <span class="tip"><b>1–5</b> armas</span>
+        <span class="tip"><b>clic der.</b> demoler</span>
+        <span class="tip">incluye la <b>pump</b></span>
+      </div>
+    </div>
+
+    <div id="customizeView" class="hidden">
+      <button class="mode-btn back-btn" data-nav="top">← VOLVER</button>
+      <div id="custPreviewWrap"><canvas id="custPreview" width="140" height="140"></canvas></div>
+      <div id="nameFieldWrap">
+        <label class="cust-section-label" for="nameInput" style="margin:0 0 6px;">TU NOMBRE</label>
+        <input id="nameInput" maxlength="16" placeholder="Jugador">
+      </div>
+      <div class="cust-section-label">COLOR</div>
+      <div class="cosmetic-grid" id="colorGrid"></div>
+      <div class="cust-section-label">SOMBRERO</div>
+      <div class="cosmetic-grid" id="hatGrid"></div>
+      <div class="cust-section-label">HALO DE RANGO</div>
+      <div class="cosmetic-grid" id="haloGrid"></div>
+    </div>
+
+    <div id="shopView" class="hidden">
+      <button class="mode-btn back-btn" data-nav="top">← VOLVER</button>
+      <div class="shop-balance"><span id="shopCoins">0</span> MONEDAS</div>
+      <div class="cosmetic-grid shop-grid" id="shopGrid"></div>
+    </div>
+
+    <div id="profileView" class="hidden">
+      <button class="mode-btn back-btn" data-nav="top">← VOLVER</button>
+      <div id="profileNameLine"></div>
+      <div class="profile-stat-grid">
+        <div class="profile-stat"><span class="v" id="profCoins">0</span><span class="l">Monedas</span></div>
+        <div class="profile-stat"><span class="v" id="profKills">0</span><span class="l">Bajas totales</span></div>
+        <div class="profile-stat"><span class="v" id="profWins">0</span><span class="l">Victorias</span></div>
+        <div class="profile-stat"><span class="v" id="profMatches">0</span><span class="l">Partidas jugadas</span></div>
+        <div class="profile-stat"><span class="v" id="profOwned">0</span><span class="l">Cosméticos</span></div>
+      </div>
+      <div class="cust-section-label">EQUIPADO</div>
+      <div id="profileEquippedWrap"><canvas id="profilePreview" width="120" height="120"></canvas></div>
+    </div>
+
+    <div id="onlineLobbyView" class="hidden">
+      <p class="sub">Crea una sala y comparte el código, o únete con el código de tu rival.</p>
+      <div id="lobbyBody">
+        <div class="modes" style="grid-template-columns:1fr 1fr; margin-bottom:4px;">
+          <button class="mode-btn" id="createRoom1v1Btn">CREAR SALA 1V1<span class="d">Un rival, cada uno desde su casa</span></button>
+          <button class="mode-btn" id="createRoom2v2Btn">CREAR SALA 2V2<span class="d">4 jugadores reales, 2 equipos</span></button>
+        </div>
+        <div id="lobbyRow">
+          <input id="roomCodeInput" maxlength="8" placeholder="CÓDIGO DE SALA">
+          <button class="mode-btn" id="joinRoomBtn" style="width:auto; white-space:nowrap;">UNIRSE</button>
+        </div>
+      </div>
+      <div class="code-display hidden" id="roomCodeDisplay"></div>
+      <div class="sub" id="lobbyStatus"></div>
+      <button class="mode-btn" id="lobbyBackBtn">VOLVER</button>
+    </div>
+  </div>
+
+  <div id="miniChat">
+    <div id="miniChatLog">Chat</div>
+    <form id="miniChatRow">
+      <input id="miniChatInput" maxlength="40" placeholder="Mensaje…" autocomplete="off">
+      <button id="miniChatSend" type="submit" aria-label="Enviar">➤</button>
+    </form>
+  </div>
+</div>
+
+<div class="overlay hidden" id="endScreen">
+  <div class="panel" id="endPanel">
+    <div class="eyebrow" id="endEyebrow">FIN DEL DUELO</div>
+    <h1 class="title" id="endTitle">VICTORIA</h1>
+    <div class="stat-row">
+      <div class="stat"><div class="v" id="statKills">0</div><div class="l">Bajas</div></div>
+      <div class="stat"><div class="v" id="statDeaths">0</div><div class="l">Caídas</div></div>
+      <div class="stat"><div class="v" id="statShots">0%</div><div class="l">Precisión</div></div>
+    </div>
+    <div class="end-actions">
+      <button class="again-btn" id="againBtn">Jugar otra vez</button>
+      <button class="mode-btn" id="endMenuBtn">Volver al menú</button>
+    </div>
+  </div>
+</div>
+
+<div class="overlay hidden" id="rankedResultsScreen">
+  <div class="panel">
+    <div class="eyebrow">MATCH RESULTS</div>
+    <h1 class="title" id="rkPlacementTitle">#3</h1>
+    <div class="stat-row">
+      <div class="stat"><div class="v" id="rkResKills">0</div><div class="l">Eliminations</div></div>
+    </div>
+    <div id="rkPointsBreakdown">
+      <div class="rk-line"><span>Elimination Points</span><span id="rkElimPts">+0</span></div>
+      <div class="rk-line"><span>Placement Points</span><span id="rkPlacePts">+0</span></div>
+      <div class="rk-line" id="rkEntryLine"><span>Entry Cost</span><span id="rkEntryPts">-0</span></div>
+      <div class="rk-line total"><span>Total</span><span id="rkTotalPts">+0</span></div>
+    </div>
+    <div id="rkRankBadgeRow">
+      <div class="rk-badge" id="rkBadge"></div>
+      <div id="rkProgressWrap">
+        <div id="rkTierName">Gold</div>
+        <div class="rk-track"><div class="rk-fill" id="rkProgressFill"></div></div>
+        <div id="rkProgressLabel"></div>
+      </div>
+    </div>
+    <div id="rankUpBanner" class="hidden">
+      <div class="rankup-title">RANK UP!</div>
+      <div class="rankup-sub" id="rankUpSub">GOLD → PLATINUM</div>
+    </div>
+    <button class="mode-btn" id="rankedResultsMenuBtn" style="margin-top:16px;">Volver al menú Ranked</button>
+  </div>
+</div>
+
+<script>
+(function(){
+"use strict";
+
+// ============================== CONFIG ==============================
+const CELL = 48;
+const COLS = 50, ROWS = 34;
+const WORLD_W = COLS*CELL, WORLD_H = ROWS*CELL;
+const PLAYER_R = 17;
+const KILLS_TO_WIN = 5;
+
+const WEAPONS = [
+  {id:'pistol', key:'1', name:'PISTOLA', dmg:17, fireRate:250, reload:950,  clip:14, reserveMax:56, speed:1500, spread:0.018, pellets:1, auto:false, range:1500, color:'#ffd166'},
+  {id:'pump',   key:'2', name:'PUMP',    dmg:22, fireRate:820, reload:650,  clip:5,  reserveMax:30, speed:1150, spread:0.17,  pellets:8, auto:false, range:560,  color:'#ff6a3d', perShell:true},
+  {id:'smg',    key:'3', name:'SUBFUSIL',dmg:9,  fireRate:90,  reload:1300, clip:28, reserveMax:112,speed:1550, spread:0.075, pellets:1, auto:true,  range:1050, color:'#4fd1c5'},
+  {id:'ar',     key:'4', name:'FUSIL',   dmg:19, fireRate:145, reload:1600, clip:30, reserveMax:120,speed:1650, spread:0.035, pellets:1, auto:true,  range:1500, color:'#c98bff'},
+  {id:'sniper', key:'5', name:'FRANCO',  dmg:78, fireRate:1200,reload:1650, clip:1,  reserveMax:8,  speed:0,    spread:0.004, pellets:1, auto:false, range:2600, color:'#ff3b5c', hitscan:true},
+];
+
+// Only the wall survives: seen from above, ramps/cones/floors added shape but no
+// real gameplay value (nothing to climb or peek over in a top-down game).
+const BUILDS = [
+  {id:'wall',  key:'q', name:'MURO',  hp:150, cost:15, half:false, self:false, hex:'#7fa8ff'},
+];
+
+const CONSUMABLES = [
+  {id:'shield', key:'6', name:'MINI ESCUDO', maxStack:6, useTime:1500, hex:'#39c7ff'},
+  {id:'medkit', key:'7', name:'BOTIQUÍN',    maxStack:3, useTime:3000, hex:'#6bffa0'},
+];
+const ICONS = {
+  shield: '<svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"><path d="M12 2.5l7.5 3v5.2c0 5-3.2 8.6-7.5 10.3-4.3-1.7-7.5-5.3-7.5-10.3V5.5l7.5-3z"/><path d="M8.7 12.2l2.2 2.2 4.4-4.6" stroke-linecap="round"/></svg>',
+  medkit: '<svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"><rect x="3" y="6" width="18" height="14" rx="2.2"/><path d="M9 6V4.6C9 3.7 9.7 3 10.6 3h2.8c.9 0 1.6.7 1.6 1.6V6" stroke-linecap="round"/><path d="M12 10v6M9 13h6" stroke-linecap="round"/></svg>',
+};
+
+const DIFF = {
+  easy:   {reaction:520, spread:2.6, buildChance:0.15, fireChance:0.55, aim:0.55, speed:0.85, fleeHp:30, engageRange:900, itemUse:0.4},
+  normal: {reaction:300, spread:1.5, buildChance:0.30, fireChance:0.75, aim:0.78, speed:1.0,  fleeHp:35, engageRange:900, itemUse:0.5},
+  hard:   {reaction:140, spread:0.9, buildChance:0.45, fireChance:0.92, aim:0.95, speed:1.12, fleeHp:35, engageRange:900, itemUse:0.6},
+};
+// The bot AI difficulty actually in effect for the current match — casual modes
+// point this at DIFF[mode]; ranked modes point it at the tier matching the
+// player's current rank, computed once when the match starts (see resetMatch).
+let activeBotDiff = DIFF.normal;
+
+// ============================== RANKED BATTLE ROYALE ==============================
+const RANK_TIERS = [
+  {id:'bronze',   name:'Bronze',   min:0,    max:499,     color:'#a9784f'},
+  {id:'silver',   name:'Silver',   min:500,  max:999,     color:'#b9c3cc'},
+  {id:'gold',     name:'Gold',     min:1000, max:1999,    color:'#ffd166'},
+  {id:'platinum', name:'Platinum', min:2000, max:2999,    color:'#7fe8d1'},
+  {id:'diamond',  name:'Diamond',  min:3000, max:4499,    color:'#7fc7ff'},
+  {id:'elite',    name:'Elite',    min:4500, max:5999,    color:'#b98bff'},
+  {id:'champion', name:'Champion', min:6000, max:7999,    color:'#ff8bcf'},
+  {id:'unreal',   name:'Unreal',   min:8000, max:Infinity, color:'#ffffff'},
+];
+// Bots play genuinely better at higher tiers — faster reactions, tighter aim,
+// more aggressive engagement range, more willing to chase/use items, and more
+// decisive about fleeing at low hp — never just "more hp/damage".
+const RANKED_BOT_DIFF = {
+  bronze:   {reaction:650, spread:3.2, aim:0.45, speed:0.75, fireChance:0.45, buildChance:0.08, itemUse:0.2, fleeHp:20, engageRange:500},
+  silver:   {reaction:520, spread:2.6, aim:0.55, speed:0.85, fireChance:0.55, buildChance:0.15, itemUse:0.3, fleeHp:25, engageRange:600},
+  gold:     {reaction:400, spread:2.0, aim:0.65, speed:0.92, fireChance:0.65, buildChance:0.20, itemUse:0.4, fleeHp:30, engageRange:700},
+  platinum: {reaction:300, spread:1.5, aim:0.75, speed:1.0,  fireChance:0.75, buildChance:0.28, itemUse:0.5, fleeHp:35, engageRange:800},
+  diamond:  {reaction:220, spread:1.1, aim:0.83, speed:1.06, fireChance:0.82, buildChance:0.35, itemUse:0.6, fleeHp:40, engageRange:900},
+  elite:    {reaction:160, spread:0.8, aim:0.90, speed:1.12, fireChance:0.88, buildChance:0.42, itemUse:0.7, fleeHp:45, engageRange:1000},
+  champion: {reaction:110, spread:0.55,aim:0.95, speed:1.18, fireChance:0.93, buildChance:0.48, itemUse:0.8, fleeHp:50, engageRange:1100},
+  unreal:   {reaction:70,  spread:0.35,aim:0.99, speed:1.25, fireChance:0.97, buildChance:0.55, itemUse:0.9, fleeHp:55, engageRange:1300},
+};
+const RANKED_ENTRY_COST = {bronze:0, silver:0, gold:0, platinum:5, diamond:10, elite:15, champion:20, unreal:25};
+// teamSize = players per team (player + this many bot allies); totalTeams = how
+// many teams compete in the match, including the player's own.
+const RANKED_MODE_CONFIG = {
+  rankedSolo:  {teamSize:1, totalTeams:16, label:'Solo'},
+  rankedDuos:  {teamSize:2, totalTeams:8,  label:'Dúos'},
+  rankedTrios: {teamSize:3, totalTeams:6,  label:'Tríos'},
+};
+function isRankedMode(m){ return m==='rankedSolo' || m==='rankedDuos' || m==='rankedTrios'; }
+// True for a LOCAL ranked match (mode is literally rankedSolo/Duos/Trios) AND for an
+// online ranked-with-friends match (mode stays 'online' for networking purposes, but
+// onlineRankedMode records which ranked format the room was created for).
+function isAnyRankedMatch(){ return isRankedMode(mode) || (mode==='online' && !!onlineRankedMode); }
+function rankTierFor(points){
+  for(const t of RANK_TIERS){ if(points>=t.min && points<=t.max) return t; }
+  return RANK_TIERS[RANK_TIERS.length-1];
+}
+function rankTierIndex(tierId){ return RANK_TIERS.findIndex(t=>t.id===tierId); }
+function rankProgress(points){
+  const t = rankTierFor(points);
+  if(t.max===Infinity) return {tier:t, pct:100, toNext:0};
+  const span = t.max-t.min+1;
+  const into = Math.max(0, points-t.min);
+  return {tier:t, pct:Math.min(100, into/span*100), toNext:Math.max(0, t.max+1-points)};
+}
+// Grants every rank-exclusive reward (skin color + halo) up to and including the tier
+// the player currently sits at, for any tier not already owned — called after every
+// change to profile.ranked.points, and once at startup so a returning player who
+// already reached a rank before this system existed gets those rewards retroactively.
+// Rewards are cumulative and permanent: dropping rank later never revokes them.
+function grantRankRewards(silent){
+  const idx = rankTierIndex(rankTierFor(profile.ranked.points).id);
+  const unlocked = [];
+  for(let i=0;i<=idx;i++){
+    const tierId = RANK_TIERS[i].id;
+    const colorId = 'color_rank_'+tierId, haloId = 'halo_'+tierId;
+    if(!ownsCosmetic(colorId)){ profile.owned.push(colorId); unlocked.push(colorId); }
+    if(!ownsCosmetic(haloId)){ profile.owned.push(haloId); unlocked.push(haloId); }
+  }
+  if(unlocked.length){
+    saveProfile();
+    if(!silent) showToast('¡RECOMPENSA DE RANGO DESBLOQUEADA! 🏆');
+  }
+  return unlocked;
+}
+
+// ============================== PROGRESSION: RARITY / COSMETICS / PROFILE ==============================
+const RARITY_COLORS = {
+  common:'#9aa5b8', uncommon:'#6bffa0', rare:'#4da3ff', epic:'#c98bff', legendary:'#ffcf5c', mythic:'#ff5ca3',
+};
+const RARITY_LABEL = {
+  common:'Common', uncommon:'Uncommon', rare:'Rare', epic:'Epic', legendary:'Legendary', mythic:'Mythic',
+};
+const KILL_COIN_REWARD = 10;
+const KILL_RANKED_POINTS = 10;
+
+// id 'default' entries are owned by everyone from the start and cost nothing.
+const COLORS = [
+  {id:'color_blue',   type:'color', name:'Azul',    hex:'#4da3ff', rarity:'common',    price:0,   default:true},
+  {id:'color_red',    type:'color', name:'Rojo',     hex:'#ff5c5c', rarity:'common',    price:0,   default:true},
+  {id:'color_green',  type:'color', name:'Verde',    hex:'#4ee08a', rarity:'uncommon',  price:150},
+  {id:'color_yellow', type:'color', name:'Amarillo', hex:'#ffe45c', rarity:'uncommon',  price:150},
+  {id:'color_purple', type:'color', name:'Morado',   hex:'#a35cff', rarity:'rare',      price:300},
+  {id:'color_pink',   type:'color', name:'Rosa',     hex:'#ff5ca3', rarity:'rare',      price:300},
+  {id:'color_black',  type:'color', name:'Negro',    hex:'#2a2f3a', rarity:'epic',      price:500},
+  {id:'color_white',  type:'color', name:'Blanco',   hex:'#f0f2f5', rarity:'epic',      price:500},
+  {id:'color_gold',   type:'color', name:'Dorado',   hex:'#ffd166', rarity:'legendary', price:800},
+  {id:'color_prism',  type:'color', name:'Prisma',   hex:'#ff8a5c', rarity:'mythic',    price:1200, special:'prism'},
+];
+const HATS = [
+  {id:'hat_none',     type:'hat', name:'Ninguno',          shape:'none',     rarity:'common',    price:0, default:true},
+  {id:'hat_cap',      type:'hat', name:'Gorra',            shape:'cap',      rarity:'common',    price:100},
+  {id:'hat_beanie',   type:'hat', name:'Beanie',           shape:'beanie',   rarity:'common',    price:120},
+  {id:'hat_helmet',   type:'hat', name:'Casco',            shape:'helmet',   rarity:'uncommon',  price:220},
+  {id:'hat_cowboy',   type:'hat', name:'Cowboy Hat',       shape:'cowboy',   rarity:'uncommon',  price:250},
+  {id:'hat_sombrero', type:'hat', name:'Sombrero Mexicano',shape:'sombrero', rarity:'rare',      price:400},
+  {id:'hat_horns',    type:'hat', name:'Cuernos',          shape:'horns',    rarity:'epic',      price:550},
+  {id:'hat_crown',    type:'hat', name:'Corona',           shape:'crown',    rarity:'legendary', price:800},
+  {id:'hat_halo',     type:'hat', name:'Halo',             shape:'halo',     rarity:'mythic',    price:1000},
+];
+// Rank-exclusive rewards: unlocked automatically the first time a player reaches each
+// rank (see grantRankRewards()) — never purchasable with coins, and kept forever once
+// unlocked even if points/rank later drop. Rarity escalates with the tier itself so the
+// UI (card border color, etc.) already reads Bronze as modest and Unreal as top-shelf.
+const RANK_REWARD_RARITY = {
+  bronze:'common', silver:'common', gold:'uncommon', platinum:'rare',
+  diamond:'rare', elite:'epic', champion:'legendary', unreal:'mythic',
+};
+const RANK_REWARD_COLORS = RANK_TIERS.map(t=>({
+  id:'color_rank_'+t.id, type:'color', name:t.name, hex:t.color, rarity:RANK_REWARD_RARITY[t.id], price:0, rankReward:t.id,
+}));
+const HALOS = [
+  {id:'halo_none', type:'halo', name:'Ninguno', shape:'none', rarity:'common', price:0, default:true},
+].concat(RANK_TIERS.map(t=>({
+  id:'halo_'+t.id, type:'halo', name:'Halo '+t.name, shape:t.id, rarity:RANK_REWARD_RARITY[t.id], price:0, rankReward:t.id,
+})));
+const COSMETICS = COLORS.concat(HATS).concat(RANK_REWARD_COLORS).concat(HALOS);
+// Which profile field each cosmetic slot equips into — shared by Customize and the Shop.
+const EQUIP_FIELD = {color:'equippedColor', hat:'equippedHat', halo:'equippedHalo'};
+
+const PROFILE_KEY = 'axelsRoyaleProfile_v1';
+const MAX_NAME_LEN = 16;
+function displayName(n){ return (n||'').trim() || 'Jugador'; }
+// Persistent per-browser player id. There's no account system or backend database (see
+// README) — server.py is a stateless relay — so this, plus everything else in profile,
+// lives only in this browser's localStorage. It's still generated and shipped in the
+// same shape a real backend would want (playerId -> saved data), so a future server-side
+// migration only has to start trusting this id instead of inventing one.
+function generatePlayerId(){
+  if(typeof crypto!=='undefined' && crypto.randomUUID) return crypto.randomUUID();
+  return 'p-'+Date.now().toString(36)+'-'+Math.random().toString(36).slice(2,10)+Math.random().toString(36).slice(2,10);
+}
+function defaultProfile(){
+  return {
+    playerId: generatePlayerId(),
+    coins:0, name:'Jugador'+Math.floor(1000+Math.random()*9000),
+    owned: COSMETICS.filter(c=>c.default).map(c=>c.id),
+    equippedColor:'color_blue', equippedHat:'hat_none', equippedHalo:'halo_none',
+    stats:{kills:0, wins:0, matchesPlayed:0},
+    ranked:{points:0, wins:0, kills:0, matches:0, bestPlacement:null},
+  };
+}
+let profile = loadProfile();
+function loadProfile(){
+  try{
+    const raw = localStorage.getItem(PROFILE_KEY);
+    if(!raw) return defaultProfile();
+    const p = JSON.parse(raw);
+    const d = defaultProfile();
+    return {
+      playerId: (typeof p.playerId==='string' && p.playerId)? p.playerId : d.playerId,
+      coins: typeof p.coins==='number'? p.coins : 0,
+      name: (typeof p.name==='string' && p.name.trim())? p.name.trim().slice(0,MAX_NAME_LEN) : d.name,
+      owned: Array.isArray(p.owned)? Array.from(new Set(d.owned.concat(p.owned))) : d.owned,
+      equippedColor: p.equippedColor || d.equippedColor,
+      equippedHat: p.equippedHat || d.equippedHat,
+      equippedHalo: p.equippedHalo || d.equippedHalo,
+      stats: Object.assign({kills:0,wins:0,matchesPlayed:0}, p.stats||{}),
+      ranked: Object.assign({points:0,wins:0,kills:0,matches:0,bestPlacement:null}, p.ranked||{}),
+    };
+  } catch(e){ return defaultProfile(); }
+}
+function saveProfile(){
+  try{ localStorage.setItem(PROFILE_KEY, JSON.stringify(profile)); } catch(e){ /* storage unavailable — play on without persistence */ }
+}
+function cosmeticById(id){ return COSMETICS.find(c=>c.id===id); }
+function ownsCosmetic(id){ return profile.owned.indexOf(id)>=0; }
+// Retroactively grants rank rewards for anyone already at/above a rank when this system
+// shipped, without making them play another match just to receive what they already earned.
+grantRankRewards(true);
+
+// ============================== STATE ==============================
+const canvas = document.getElementById('game');
+let ctx = canvas.getContext('2d');
+let DPR = Math.min(window.devicePixelRatio||1, 2);
+
+function resize(){
+  DPR = Math.min(window.devicePixelRatio||1, 2);
+  canvas.width = innerWidth*DPR; canvas.height = innerHeight*DPR;
+  canvas.style.width = innerWidth+'px'; canvas.style.height = innerHeight+'px';
+}
+window.addEventListener('resize', resize); resize();
+
+const keys = {};
+const mouse = {x:innerWidth/2, y:innerHeight/2, down:false, rdown:false};
+
+let mode = null; // 'practice'|'easy'|'normal'|'hard'|'online'
+let running = false, paused = false;
+let camX=0, camY=0;
+let time = 0;
+
+const solids = new Map(); // "cx,cy" -> piece
+function cellKey(cx,cy){ return cx+','+cy; }
+
+function makeFighter(isBot){
+  return {
+    isBot, team:0, color:null, hat:null, halo:null, rankTierId:null, spawnPos:null,
+    x:0, y:0, angle:0, hp:100, maxHp:100, alive:true,
+    shield:0, maxShield:50,
+    inventory:{shield:0, medkit:0}, consumableIdx:-1, usingItem:null, channelProgress:null,
+    mats: isBot? 240:200, maxMats:300,
+    weaponIdx:0, buildIdx:-1, // -1 = weapon mode
+    clip: WEAPONS.map(w=>w.clip),
+    reserve: WEAPONS.map(w=>Math.floor(w.reserveMax*0.6)),
+    reloading:false, reloadEnd:0,
+    lastFire:0, lastBuild:0, lastHitTime:-99999, lastPick:0,
+    kills:0, deaths:0, shotsFired:0, shotsHit:0,
+    speed: 220,
+    aiState:'approach', aiNextDecision:0, aiTargetCell:null, aiTarget:null,
+    _moveDir:null, _wantFire:false, _aimNoise:0, _consumeDecision:null,
+    netTarget:null,
+  };
+}
+
+function teamKills(team){
+  return activeFighters.filter(f=>f.team===team).reduce((s,f)=>s+f.kills,0);
+}
+function isTeamMode(){ return mode==='2v2normal' || (mode==='online' && onlineCapacity>2); }
+function killsToWinFor(m){ return (m==='2v2normal' || (m==='online' && onlineCapacity>2))? 8 : KILLS_TO_WIN; }
+
+// Generic ammo restore — refills every current weapon's clip and reserve to max.
+// Works for any weapon in WEAPONS without per-weapon special-casing, so future
+// weapons get full-refill-on-respawn for free.
+function refillAllAmmo(f){
+  WEAPONS.forEach((w,i)=>{ f.clip[i] = w.clip; f.reserve[i] = w.reserveMax; });
+}
+let player = makeFighter(false), bot = makeFighter(true), activeFighters = [player, bot];
+player.x = WORLD_W/2; player.y = WORLD_H/2; bot.x = -9999; bot.y = -9999; bot.alive = false;
+let bullets = [];
+let particles = [];
+let beams = []; // sniper tracer lines {x1,y1,x2,y2,t,color}
+let floatTexts = [];
+let respawnTimers = [];
+let winner = null;
+let rankedMatch = null; // {modeCfg, tier, entryCost, milestonesHit, placementPoints, eliminationPoints, pointsThisMatch, ended, placement, afterTier, rankedUp}
+
+function applyEquippedCosmetics(f){
+  f.color = cosmeticById(profile.equippedColor).hex;
+  f.hat = profile.equippedHat;
+  f.halo = profile.equippedHalo;
+  f.name = displayName(profile.name);
+}
+
+// Fixed corner layout shared by every team mode (local 2v2 and online alike):
+// team 0 always spawns on the left, team 1 on the right; slot picks upper/lower
+// when a team has 2 members.
+function teamSpawnFor(team, slot, capacity){
+  const left = team === 0;
+  if(capacity <= 2){
+    return {x: left? CELL*6 : WORLD_W-CELL*6, y: WORLD_H/2, angle: left? 0 : Math.PI};
+  }
+  return {x: left? CELL*5 : WORLD_W-CELL*5, y: WORLD_H/2 + (slot===0? -140:140), angle: left? 0 : Math.PI};
+}
+
+// Spreads N team anchor points across the map in a loose, shuffled grid so
+// battle-royale matches don't cluster every team in the same spot.
+function generateTeamAnchors(totalTeams){
+  const marginX=5, marginY=5;
+  const cols = Math.max(1, Math.ceil(Math.sqrt(totalTeams * (COLS-marginX*2)/(ROWS-marginY*2))));
+  const rows = Math.max(1, Math.ceil(totalTeams/cols));
+  const cellW = (COLS-marginX*2)/cols, cellH = (ROWS-marginY*2)/rows;
+  const anchors = [];
+  for(let i=0;i<totalTeams;i++){
+    const gx = i%cols, gy = Math.floor(i/cols);
+    const cx = marginX + (gx+0.5)*cellW + (matchRng()-0.5)*cellW*0.5;
+    const cy = marginY + (gy+0.5)*cellH + (matchRng()-0.5)*cellH*0.5;
+    anchors.push({x:cx*CELL, y:cy*CELL});
+  }
+  for(let i=anchors.length-1;i>0;i--){ const j=Math.floor(matchRng()*(i+1)); [anchors[i],anchors[j]]=[anchors[j],anchors[i]]; }
+  return anchors;
+}
+
+function setupRankedMatch(m){
+  const cfg = RANKED_MODE_CONFIG[m];
+  const tier = rankTierFor(profile.ranked.points);
+  activeBotDiff = RANKED_BOT_DIFF[tier.id] || RANKED_BOT_DIFF.bronze;
+  const entryCost = RANKED_ENTRY_COST[tier.id]||0;
+  profile.ranked.points = Math.max(0, profile.ranked.points-entryCost);
+  saveProfile();
+
+  player.team = 0;
+  activeFighters = [player];
+  for(let i=1;i<cfg.teamSize;i++){ const ally=makeFighter(true); ally.team=0; activeFighters.push(ally); }
+  for(let t=1;t<cfg.totalTeams;t++){
+    for(let i=0;i<cfg.teamSize;i++){ const enemy=makeFighter(true); enemy.team=t; activeFighters.push(enemy); }
+  }
+  bot = activeFighters.find(f=>f!==player); // legacy alias for any lone-"bot" reference
+
+  const anchors = generateTeamAnchors(cfg.totalTeams);
+  let idx=0;
+  for(let t=0;t<cfg.totalTeams;t++){
+    const anchor = anchors[t];
+    for(let i=0;i<cfg.teamSize;i++){
+      const f = activeFighters[idx++];
+      const ang = (i/cfg.teamSize)*Math.PI*2 + matchRng();
+      const x = Math.max(PLAYER_R+30, Math.min(WORLD_W-PLAYER_R-30, anchor.x+Math.cos(ang)*45));
+      const y = Math.max(PLAYER_R+30, Math.min(WORLD_H-PLAYER_R-30, anchor.y+Math.sin(ang)*45));
+      f.spawnPos = {x, y, angle: matchRng()*Math.PI*2};
+      spawnFighter(f, f.spawnPos, f.spawnPos.angle, {respawn:true});
+    }
+  }
+
+  rankedMatch = {
+    modeCfg:cfg, tier, entryCost,
+    milestonesHit:new Set(), placementPoints:0, eliminationPoints:0,
+    pointsThisMatch:-entryCost, ended:false, placement:null, afterTier:null, rankedUp:false,
+  };
+}
+
+// Ranked-with-friends: 2-3 real humans share team 0 (netIds 0..onlineCapacity-1,
+// exactly like plain online peers), every other team is bots. Only the host
+// (myPeerIndex===0) ever runs bot AI or decides match-progress — see onlineIsHost()/
+// isMatchAuthority() and the botThink/botAct guards. Every other client, human or bot,
+// is mirrored purely from broadcast 's' state, so friends never need their own copy
+// of the bot AI or the battle-royale elimination logic.
+function setupOnlineRankedMatch(){
+  const cfg = RANKED_MODE_CONFIG[onlineRankedMode];
+  const tier = rankTierFor(profile.ranked.points);
+  activeBotDiff = RANKED_BOT_DIFF[tier.id] || RANKED_BOT_DIFF.bronze;
+  const entryCost = RANKED_ENTRY_COST[tier.id]||0;
+  profile.ranked.points = Math.max(0, profile.ranked.points-entryCost);
+  saveProfile();
+
+  activeFighters = [];
+  remoteFighters = [];
+  for(let i=0;i<onlineCapacity;i++){
+    const f = (i===myPeerIndex)? player : makeFighter(false);
+    if(i!==myPeerIndex) f.isOnlineRemote = true;
+    f.team = 0;
+    activeFighters.push(f);
+    remoteFighters[i] = f;
+  }
+  bot = activeFighters.find(f=>f!==player) || player; // legacy alias, harmless here — ranked HUD never reads it
+
+  for(let t=1;t<cfg.totalTeams;t++){
+    for(let i=0;i<cfg.teamSize;i++){
+      const enemy = makeFighter(true); enemy.team = t;
+      activeFighters.push(enemy);
+      remoteFighters[activeFighters.length-1] = enemy;
+    }
+  }
+
+  const anchors = generateTeamAnchors(cfg.totalTeams);
+  const humanAnchor = anchors[0];
+  for(let i=0;i<onlineCapacity;i++){
+    const f = activeFighters[i];
+    const ang = (i/onlineCapacity)*Math.PI*2 + matchRng();
+    const x = Math.max(PLAYER_R+30, Math.min(WORLD_W-PLAYER_R-30, humanAnchor.x+Math.cos(ang)*45));
+    const y = Math.max(PLAYER_R+30, Math.min(WORLD_H-PLAYER_R-30, humanAnchor.y+Math.sin(ang)*45));
+    f.spawnPos = {x, y, angle: matchRng()*Math.PI*2};
+    spawnFighter(f, f.spawnPos, f.spawnPos.angle, {respawn:true});
+  }
+  let idx = onlineCapacity;
+  for(let t=1;t<cfg.totalTeams;t++){
+    const anchor = anchors[t];
+    for(let i=0;i<cfg.teamSize;i++){
+      const f = activeFighters[idx++];
+      const ang = (i/cfg.teamSize)*Math.PI*2 + matchRng();
+      const x = Math.max(PLAYER_R+30, Math.min(WORLD_W-PLAYER_R-30, anchor.x+Math.cos(ang)*45));
+      const y = Math.max(PLAYER_R+30, Math.min(WORLD_H-PLAYER_R-30, anchor.y+Math.sin(ang)*45));
+      f.spawnPos = {x, y, angle: matchRng()*Math.PI*2};
+      spawnFighter(f, f.spawnPos, f.spawnPos.angle, {respawn:true});
+    }
+  }
+
+  rankedMatch = {
+    modeCfg:cfg, tier, entryCost,
+    milestonesHit:new Set(), placementPoints:0, eliminationPoints:0,
+    pointsThisMatch:-entryCost, ended:false, placement:null, afterTier:null, rankedUp:false,
+  };
+}
+
+function resetMatch(diffKey){
+  mode = diffKey;
+  solids.clear();
+  bullets = []; particles = []; beams = []; floatTexts = []; respawnTimers = [];
+  winner = null; rankedMatch = null;
+  player = makeFighter(false);
+  applyEquippedCosmetics(player);
+  // Online matches seed matchRng from the shared room code so every client builds the
+  // identical map/spawn layout without ever transmitting it; local matches keep using
+  // plain Math.random (no sync needed, and randomness there is harmless/desirable).
+  matchRng = (mode==='online' && myRoomCode)? mulberry32(hashStringToInt(myRoomCode)) : Math.random;
+
+  if(mode==='2v2normal'){
+    activeBotDiff = DIFF.normal;
+    player.team = 0;
+    const ally = makeFighter(true); ally.team = 0;
+    const enemy1 = makeFighter(true); enemy1.team = 1;
+    const enemy2 = makeFighter(true); enemy2.team = 1;
+    bot = enemy1; // legacy single-opponent alias, used only where a lone "bot" reference is harmless
+    activeFighters = [player, ally, enemy1, enemy2];
+    [[player,0],[ally,1],[enemy1,0],[enemy2,1]].forEach(([f,slot])=>{
+      f.spawnPos = teamSpawnFor(f.team, slot, 4); spawnFighter(f, f.spawnPos, f.spawnPos.angle);
+    });
+  } else if(mode==='online' && onlineRankedMode){
+    setupOnlineRankedMatch();
+  } else if(mode==='online'){
+    activeBotDiff = DIFF.normal;
+    activeFighters = [];
+    remoteFighters = [];
+    for(let i=0;i<onlineCapacity;i++){
+      const f = (i===myPeerIndex)? player : makeFighter(false);
+      if(i!==myPeerIndex) f.isOnlineRemote = true;
+      f.team = i%2;
+      f.spawnPos = teamSpawnFor(f.team, Math.floor(i/2), onlineCapacity);
+      activeFighters.push(f);
+      remoteFighters[i] = f;
+    }
+    bot = activeFighters.find(f=>f!==player); // legacy alias: "my first opponent", used for disconnect-screen stats
+    activeFighters.forEach(f=>{ spawnFighter(f, f.spawnPos, f.spawnPos.angle); });
+  } else if(isRankedMode(mode)){
+    setupRankedMatch(mode);
+  } else {
+    activeBotDiff = DIFF[mode] || DIFF.normal;
+    player.team = 0;
+    bot = makeFighter(true);
+    bot.team = 1;
+    activeFighters = [player, bot];
+    [[player,0],[bot,1]].forEach(([f,team])=>{
+      f.spawnPos = teamSpawnFor(team, 0, 2); spawnFighter(f, f.spawnPos, f.spawnPos.angle);
+    });
+    if(diffKey==='practice'){
+      player.mats = 9999; player.maxMats = 9999;
+      bot.hp = 0; bot.alive = false; bot.isDummyOff = true;
+    }
+  }
+
+  buildBoundaryWalls(null, isAnyRankedMatch());
+  seedPickups();
+  running = true; paused = false; time = 0; lastStateSendTime = 0; lastBotStateSendTime = 0;
+  updateHUDStatic();
+}
+
+// ============================== MAPS ==============================
+// Several distinct cover layouts — one is picked at random each match so games
+// don't all look identical. Ranked matches lay down extra scattered cover on
+// top of the base layout since they host far more fighters at once.
+const MAP_LAYOUTS = {
+  clasico: [
+    [12,8],[12,9],[13,8],[13,9],
+    [COLS-13,8],[COLS-13,9],[COLS-14,8],[COLS-14,9],
+    [Math.floor(COLS/2)-1,4],[Math.floor(COLS/2),4],[Math.floor(COLS/2)+1,4],
+    [Math.floor(COLS/2)-1,ROWS-5],[Math.floor(COLS/2),ROWS-5],[Math.floor(COLS/2)+1,ROWS-5],
+    [8,ROWS-6],[9,ROWS-6],[COLS-9,ROWS-6],[COLS-10,ROWS-6],
+    [8,6],[COLS-9,6],
+  ],
+  cruce: [
+    [Math.floor(COLS/2)-1,10],[Math.floor(COLS/2),10],[Math.floor(COLS/2)+1,10],
+    [Math.floor(COLS/2)-1,16],[Math.floor(COLS/2)+1,16],
+    [Math.floor(COLS/2)-1,24],[Math.floor(COLS/2),24],[Math.floor(COLS/2)+1,24],
+    [16,Math.floor(ROWS/2)-1],[16,Math.floor(ROWS/2)],
+    [24,Math.floor(ROWS/2)-1],[24,Math.floor(ROWS/2)],
+    [34,Math.floor(ROWS/2)-1],[34,Math.floor(ROWS/2)],
+    [6,5],[7,5],[COLS-7,5],[COLS-8,5],
+    [6,ROWS-6],[7,ROWS-6],[COLS-7,ROWS-6],[COLS-8,ROWS-6],
+  ],
+  islas: [
+    [10,7],[11,7],[10,8],
+    [COLS-11,7],[COLS-12,7],[COLS-11,8],
+    [10,ROWS-8],[11,ROWS-8],[10,ROWS-9],
+    [COLS-11,ROWS-8],[COLS-12,ROWS-8],[COLS-11,ROWS-9],
+    [Math.floor(COLS/2)-1,Math.floor(ROWS/2)-1],[Math.floor(COLS/2),Math.floor(ROWS/2)-1],
+    [Math.floor(COLS/2)-1,Math.floor(ROWS/2)],[Math.floor(COLS/2),Math.floor(ROWS/2)],
+    [18,17],[19,17],[COLS-19,17],[COLS-20,17],
+  ],
+};
+const MAP_NAMES = {clasico:'Clásico', cruce:'Cruce', islas:'Islas'};
+let currentMapKey = 'clasico';
+
+function placeCrate(cx,cy){
+  const k = cellKey(cx,cy);
+  if(cx<1||cy<1||cx>=COLS-1||cy>=ROWS-1) return;
+  if(!solids.has(k)){
+    solids.set(k, {cx,cy, type:'crate', hp:220, maxHp:220, half:false, owner:null, hex:'#3a4560'});
+  }
+}
+
+// A small hollow 3x3 "house" ring of solid cells with one open side (the doorway) — real,
+// destructible cover exactly like a crate (same solids/hp/collision machinery), just a
+// distinct shape/look so a couple of POIs read as small structures instead of crate piles.
+function placeHouseRing(cx0, cy0){
+  const cells = [];
+  for(let dx=-1; dx<=1; dx++){ cells.push([cx0+dx, cy0-1]); cells.push([cx0+dx, cy0+1]); }
+  cells.push([cx0-1, cy0]); // left wall; cx0+1,cy0 stays open as the doorway
+  cells.forEach(([cx,cy])=>{
+    if(cx<1||cy<1||cx>=COLS-1||cy>=ROWS-1) return;
+    const k = cellKey(cx,cy);
+    if(!solids.has(k)) solids.set(k, {cx,cy,type:'housewall',hp:260,maxHp:260,half:false,owner:null,hex:'#8a5a3c'});
+  });
+}
+
+function buildBoundaryWalls(mapKey, extraCover){
+  const keys = Object.keys(MAP_LAYOUTS);
+  currentMapKey = MAP_LAYOUTS[mapKey]? mapKey : keys[Math.floor(matchRng()*keys.length)];
+  MAP_LAYOUTS[currentMapKey].forEach(([cx,cy])=>{ if(cx!=null&&cy!=null) placeCrate(cx,cy); });
+  if(extraCover){
+    // extra scattered clusters spread across the map for a richer battle-royale field
+    const cols=6, rows=4, marginX=6, marginY=5;
+    for(let gx=0; gx<cols; gx++){
+      for(let gy=0; gy<rows; gy++){
+        if(matchRng()<0.45) continue;
+        const cx = marginX + Math.round(gx*(COLS-marginX*2)/(cols-1)) + (matchRng()<0.5?-2:2);
+        const cy = marginY + Math.round(gy*(ROWS-marginY*2)/(rows-1)) + (matchRng()<0.5?-1:1);
+        placeCrate(cx,cy); placeCrate(cx+1,cy);
+      }
+    }
+  }
+  // A couple of standalone house-cover POIs, independent of the hand-authored layout —
+  // purely additive, so existing cover density/balance for every mode is unchanged.
+  const houseCount = extraCover? 3 : 2;
+  for(let i=0;i<houseCount;i++){
+    placeHouseRing(6+Math.floor(matchRng()*(COLS-12)), 6+Math.floor(matchRng()*(ROWS-12)));
+  }
+  generateTerrain();
+}
+
+// ============================== MAP DECORATION (visual only, no collision) ==============================
+// Biome patches, roads and scattered props (trees/bushes/rocks) live on their own
+// offscreen canvas, pre-rendered once per match and blitted whole in drawGround(). None
+// of this touches `solids` — the only things that block movement/bullets are the walls/
+// crates/house-rings above, exactly as before.
+let terrainCanvas = null;
+function terrainCtx(){
+  if(!terrainCanvas){ terrainCanvas = document.createElement('canvas'); terrainCanvas.width = WORLD_W; terrainCanvas.height = WORLD_H; }
+  return terrainCanvas.getContext('2d');
+}
+function drawBlob(tctx, x, y, r, fill, edge){
+  const bumps = 8 + Math.floor(matchRng()*4);
+  tctx.beginPath();
+  for(let i=0;i<=bumps;i++){
+    const a = (i/bumps)*Math.PI*2;
+    const rr = r*(0.78+matchRng()*0.28);
+    const px = x+Math.cos(a)*rr, py = y+Math.sin(a)*rr;
+    if(i===0) tctx.moveTo(px,py); else tctx.lineTo(px,py);
+  }
+  tctx.closePath();
+  tctx.fillStyle = fill; tctx.fill();
+  if(edge){ tctx.strokeStyle = edge; tctx.lineWidth = 6; tctx.stroke(); }
+}
+function drawRoadSeg(tctx, x1,y1,x2,y2){
+  tctx.strokeStyle = '#5a5348'; tctx.lineWidth = CELL*0.9; tctx.lineCap = 'round';
+  tctx.beginPath(); tctx.moveTo(x1,y1); tctx.lineTo(x2,y2); tctx.stroke();
+  tctx.strokeStyle = 'rgba(255,235,180,0.18)'; tctx.lineWidth = 3; tctx.setLineDash([18,16]);
+  tctx.beginPath(); tctx.moveTo(x1,y1); tctx.lineTo(x2,y2); tctx.stroke();
+  tctx.setLineDash([]);
+}
+// All props are drawn top-down (canopy/footprint from above), matching the game's
+// overhead camera — a side-view tree or house would look wrong from this angle.
+function drawTreeProp(tctx, x, y){
+  tctx.beginPath(); tctx.ellipse(x,y+6,15,8,0,0,Math.PI*2); tctx.fillStyle='rgba(0,0,0,0.25)'; tctx.fill();
+  tctx.beginPath(); tctx.arc(x,y,15,0,Math.PI*2); tctx.fillStyle='#2f5c33'; tctx.fill();
+  tctx.beginPath(); tctx.arc(x,y,9,0,Math.PI*2); tctx.fillStyle='#3c7a41'; tctx.fill();
+  tctx.beginPath(); tctx.arc(x-3,y-4,3.5,0,Math.PI*2); tctx.fillStyle='rgba(255,255,255,0.08)'; tctx.fill();
+}
+function drawBushProp(tctx, x, y){
+  tctx.beginPath(); tctx.arc(x,y,8,0,Math.PI*2); tctx.fillStyle='#345c37'; tctx.fill();
+  tctx.beginPath(); tctx.arc(x-5,y+3,5,0,Math.PI*2); tctx.fillStyle='#2c4d2f'; tctx.fill();
+  tctx.beginPath(); tctx.arc(x+5,y+2,5,0,Math.PI*2); tctx.fillStyle='#2c4d2f'; tctx.fill();
+}
+function drawRockProp(tctx, x, y){
+  tctx.beginPath();
+  tctx.moveTo(x-9,y+4); tctx.lineTo(x-5,y-6); tctx.lineTo(x+4,y-7); tctx.lineTo(x+9,y+2); tctx.lineTo(x+2,y+7); tctx.closePath();
+  tctx.fillStyle = '#565f6b'; tctx.fill();
+  tctx.strokeStyle='rgba(0,0,0,0.3)'; tctx.lineWidth=1.5; tctx.stroke();
+}
+function generateTerrain(){
+  const tctx = terrainCtx();
+  tctx.clearRect(0,0,WORLD_W,WORLD_H);
+  tctx.fillStyle = '#182a1c';
+  tctx.fillRect(0,0,WORLD_W,WORLD_H);
+  for(let i=0;i<70;i++){
+    const x=matchRng()*WORLD_W, y=matchRng()*WORLD_H, r=30+matchRng()*70;
+    tctx.beginPath(); tctx.arc(x,y,r,0,Math.PI*2);
+    tctx.fillStyle = matchRng()<0.5? 'rgba(255,255,255,0.015)':'rgba(0,0,0,0.05)';
+    tctx.fill();
+  }
+  const dirtN = 2+Math.floor(matchRng()*2);
+  for(let i=0;i<dirtN;i++){
+    drawBlob(tctx, 200+matchRng()*(WORLD_W-400), 200+matchRng()*(WORLD_H-400), 130+matchRng()*110, '#4a3a2a', '#3a2d20');
+  }
+  drawBlob(tctx, 200+matchRng()*(WORLD_W-400), 200+matchRng()*(WORLD_H-400), 140+matchRng()*90, '#5c5232', '#493f26');
+  if(matchRng()<0.85){
+    const wx=200+matchRng()*(WORLD_W-400), wy=200+matchRng()*(WORLD_H-400), wr=90+matchRng()*60;
+    drawBlob(tctx, wx, wy, wr+18, '#3a4a2f', null);
+    drawBlob(tctx, wx, wy, wr, '#1f4a5c', '#173a48');
+  }
+  const pts=[];
+  for(let i=0;i<3;i++) pts.push({x:180+matchRng()*(WORLD_W-360), y:180+matchRng()*(WORLD_H-360)});
+  for(let i=0;i<pts.length-1;i++) drawRoadSeg(tctx, pts[i].x,pts[i].y, pts[i+1].x,pts[i+1].y);
+  const propCount = 90;
+  for(let i=0;i<propCount;i++){
+    const cx = 2+Math.floor(matchRng()*(COLS-4)), cy = 2+Math.floor(matchRng()*(ROWS-4));
+    if(solids.has(cellKey(cx,cy))) continue;
+    const x = cx*CELL+CELL/2, y = cy*CELL+CELL/2;
+    const r = matchRng();
+    if(r<0.4) drawTreeProp(tctx,x,y); else if(r<0.75) drawBushProp(tctx,x,y); else drawRockProp(tctx,x,y);
+  }
+}
+
+// ============================== WORLD PICKUPS ==============================
+// Fixed, deterministic spawn layout (same on every client — no sync needed for
+// where pickups start; only collection events are sent over the network).
+const PICKUP_RESPAWN_MS = 25000;
+let pickups = [];
+
+function seedPickups(){
+  const spots = [
+    {cx:18,cy:10,type:'shield',amount:2}, {cx:32,cy:10,type:'shield',amount:2},
+    {cx:18,cy:24,type:'shield',amount:2}, {cx:32,cy:24,type:'shield',amount:2},
+    {cx:25,cy:6, type:'shield',amount:1}, {cx:25,cy:28,type:'shield',amount:1},
+    {cx:10,cy:17,type:'medkit',amount:1}, {cx:40,cy:17,type:'medkit',amount:1},
+    {cx:25,cy:17,type:'medkit',amount:1}, {cx:15,cy:12,type:'medkit',amount:1},
+  ];
+  pickups = spots.map((s,i)=>({
+    id:'pk'+i, x:s.cx*CELL+CELL/2, y:s.cy*CELL+CELL/2, type:s.type, amount:s.amount,
+    active:true, respawnAt:0,
+  }));
+}
+
+function tryCollectPickup(pk, f){
+  const c = CONSUMABLES.find(cc=>cc.id===pk.type);
+  const cur = f.inventory[pk.type]||0;
+  if(cur>=c.maxStack) return; // full — leave it on the ground
+  pk.active = false;
+  pk.respawnAt = time + PICKUP_RESPAWN_MS;
+  f.inventory[pk.type] = Math.min(c.maxStack, cur+pk.amount);
+  spawnSparks(pk.x,pk.y, c.hex, 12);
+  if(f===player) floatTexts.push({x:pk.x,y:pk.y-18,txt:'+'+pk.amount+' '+c.name,t:0,color:c.hex});
+  if(mode==='online' && (f===player || f.isBot)) sendGame({k:'pk', id:pk.id});
+}
+
+function updatePickups(){
+  // Only fighters simulated on THIS client can collect: the local player, and any bot
+  // this client actually runs AI for (a local bot, or the host's ranked-with-friends
+  // bots). An online rival/mirrored bot is network-driven — their collection arrives
+  // as a 'pk' message instead.
+  const collectors = activeFighters.filter(f=>f.alive && (f===player || (f.isBot && (mode!=='online' || onlineIsHost()))));
+  pickups.forEach(pk=>{
+    if(!pk.active){ if(time>=pk.respawnAt) pk.active=true; return; }
+    for(const f of collectors){
+      const dx=f.x-pk.x, dy=f.y-pk.y;
+      if(dx*dx+dy*dy <= (PLAYER_R+14)*(PLAYER_R+14)){ tryCollectPickup(pk, f); break; }
+    }
+  });
+}
+
+function spawnFighter(f, pos, angle, opts){
+  f.x = pos.x; f.y = pos.y; f.hp = f.maxHp; f.alive = true; f.reloading=false;
+  f.angle = angle!==undefined? angle : (f===player? 0 : Math.PI);
+  f.lastHitTime = -99999;
+  f.usingItem = null; f.channelProgress = null;
+  if(opts && opts.respawn){
+    f.shield = 0;
+    refillAllAmmo(f);
+  }
+}
+
+// ============================== INPUT ==============================
+window.addEventListener('keydown', e=>{
+  const k = e.key.toLowerCase();
+  keys[k] = true;
+  if(!running || paused) return;
+  if(k>='1'&&k<='5'){ player.buildIdx=-1; player.consumableIdx=-1; player.weaponIdx = +k-1; }
+  const bIdx = BUILDS.findIndex(b=>b.key===k);
+  if(bIdx>=0){ player.buildIdx = bIdx; player.consumableIdx=-1; }
+  const cIdx = CONSUMABLES.findIndex(c=>c.key===k);
+  if(cIdx>=0){ player.consumableIdx = cIdx; player.buildIdx=-1; }
+  if(k===' '){ e.preventDefault(); tryReload(player); }
+  if(k==='escape'){ togglePause(); }
+});
+window.addEventListener('keyup', e=>{ keys[e.key.toLowerCase()]=false; });
+
+canvas.addEventListener('mousemove', e=>{ mouse.x=e.clientX; mouse.y=e.clientY; });
+canvas.addEventListener('mousedown', e=>{
+  if(e.button===0) mouse.down=true;
+  if(e.button===2) mouse.rdown=true;
+});
+window.addEventListener('mouseup', e=>{
+  if(e.button===0) mouse.down=false;
+  if(e.button===2) mouse.rdown=false;
+});
+canvas.addEventListener('contextmenu', e=>e.preventDefault());
+canvas.addEventListener('wheel', e=>{
+  if(!running||paused) return;
+  if(player.buildIdx>=0 || player.consumableIdx>=0){ return; }
+  const dir = e.deltaY>0?1:-1;
+  player.weaponIdx = (player.weaponIdx+dir+WEAPONS.length)%WEAPONS.length;
+},{passive:true});
+
+document.getElementById('helpBtn').addEventListener('click', ()=>{
+  document.getElementById('helpPanel').classList.toggle('show');
+});
+
+// ============================== MAIN MENU NAVIGATION ==============================
+const topNavView = document.getElementById('topNavView');
+const SUBVIEWS = {
+  play: document.getElementById('mainMenuView'),
+  customize: document.getElementById('customizeView'),
+  shop: document.getElementById('shopView'),
+  profile: document.getElementById('profileView'),
+  ranked: document.getElementById('rankedView'),
+};
+
+function refreshTopNavSummary(){
+  document.getElementById('navCoins').textContent = profile.coins;
+  document.getElementById('navKills').textContent = profile.stats.kills;
+  document.getElementById('navWins').textContent = profile.stats.wins;
+  const tier = rankTierFor(profile.ranked.points);
+  document.getElementById('rankedNavRankName').textContent = 'RANKED · '+tier.name.toUpperCase();
+}
+function showSubview(name){
+  topNavView.classList.add('hidden');
+  Object.values(SUBVIEWS).forEach(v=>v.classList.add('hidden'));
+  if(name==='top'){ topNavView.classList.remove('hidden'); refreshTopNavSummary(); return; }
+  SUBVIEWS[name].classList.remove('hidden');
+  if(name==='customize') renderCustomizeView();
+  if(name==='shop') renderShopView();
+  if(name==='profile') renderProfileView();
+  if(name==='ranked') renderRankedView();
+}
+document.querySelectorAll('.nav-btn').forEach(btn=>{
+  btn.addEventListener('click', ()=> showSubview(btn.dataset.nav));
+});
+document.querySelectorAll('.back-btn').forEach(btn=>{
+  btn.addEventListener('click', ()=> showSubview('top'));
+});
+refreshTopNavSummary();
+
+// ============================== DEV UNLOCK-ALL CHEAT ==============================
+// Disguised as a stub "chat" box (menu-only) so it doesn't read as a cheat-code
+// field to anyone but the person who already knows the phrase. Whatever is typed
+// is compared case-insensitively; anything else is just silently dropped, exactly
+// like a chat box nobody implemented the backend for yet.
+const DEV_CHEAT_CODE = 'nx7quartz419'; // compared with punctuation/spacing/case stripped — see normalizeCode()
+// Second, separate dev-only code: sets your OWN rank to any tier on demand, for testing
+// high-rank bot difficulty/UI without grinding. Typed as the prefix followed directly by
+// a tier id (spaces/punctuation are stripped first) — e.g. "nx7rank diamond".
+const DEV_RANK_PREFIX = 'nx7rank';
+const miniChatInput = document.getElementById('miniChatInput');
+const miniChatForm = document.getElementById('miniChatRow');
+function normalizeCode(s){ return (s||'').toLowerCase().replace(/[^a-z0-9]/g,''); }
+function trySubmitMiniChat(){
+  const said = normalizeCode(miniChatInput.value);
+  miniChatInput.value = '';
+  miniChatInput.blur();
+  if(said === DEV_CHEAT_CODE){
+    let added = 0;
+    COSMETICS.forEach(c=>{ if(!ownsCosmetic(c.id)){ profile.owned.push(c.id); added++; } });
+    saveProfile();
+    refreshTopNavSummary();
+    if(!SUBVIEWS.customize.classList.contains('hidden')) renderCustomizeView();
+    if(!SUBVIEWS.shop.classList.contains('hidden')) renderShopView();
+    if(!SUBVIEWS.profile.classList.contains('hidden')) renderProfileView();
+    showToast(added>0? 'DEV: TODO DESBLOQUEADO 🔓' : 'DEV: YA TENÍAS TODO 🔓');
+    return;
+  }
+  if(said.startsWith(DEV_RANK_PREFIX)){
+    const tier = RANK_TIERS.find(t=>t.id===said.slice(DEV_RANK_PREFIX.length));
+    if(!tier) return;
+    profile.ranked.points = tier.min;
+    saveProfile();
+    grantRankRewards(true); // silent — the dev toast below already confirms the change
+    refreshTopNavSummary();
+    if(!SUBVIEWS.ranked.classList.contains('hidden')) renderRankedView();
+    if(!SUBVIEWS.customize.classList.contains('hidden')) renderCustomizeView();
+    if(!SUBVIEWS.profile.classList.contains('hidden')) renderProfileView();
+    showToast('DEV: RANGO AJUSTADO A '+tier.name.toUpperCase()+' 🏆');
+    return;
+  }
+}
+// A <form> submit fires on Enter-in-input AND on clicking the submit button alike —
+// far more reliable across browsers/devices than hand-checking e.key for "Enter".
+miniChatForm.addEventListener('submit', e=>{ e.preventDefault(); trySubmitMiniChat(); });
+
+function cosmeticSwatchHTML(c){
+  if(c.type==='color'){
+    return `<div class="swatch" style="background:${c.hex}"></div>`;
+  }
+  if(c.type==='halo'){
+    return `<div class="swatch halo-swatch" style="background:var(--surface2); display:flex; align-items:center; justify-content:center;">${haloSwatchSvg(c.shape, RARITY_COLORS[c.rarity])}</div>`;
+  }
+  return `<div class="swatch" style="background:var(--surface2); display:flex; align-items:center; justify-content:center;">${hatSwatchSvg(c.shape, RARITY_COLORS[c.rarity])}</div>`;
+}
+
+const nameInput = document.getElementById('nameInput');
+nameInput.addEventListener('input', ()=>{
+  profile.name = nameInput.value.slice(0,MAX_NAME_LEN);
+  saveProfile();
+  if(player) player.name = displayName(profile.name);
+});
+
+// Locked reward-only cosmetics show which rank unlocks them instead of a shop price —
+// there's nothing to buy, so "reach Diamond" is the only useful thing to tell the player.
+function lockHintHTML(c){
+  if(!c.rankReward) return '';
+  const t = RANK_TIERS.find(t=>t.id===c.rankReward);
+  return `<div class="cname" style="font-size:10px; opacity:.7;">Rango: ${t.name}</div>`;
+}
+function renderCosmeticGrid(gridEl, list){
+  gridEl.innerHTML = '';
+  list.forEach(c=>{
+    const field = EQUIP_FIELD[c.type];
+    const owned = ownsCosmetic(c.id);
+    const equipped = profile[field]===c.id;
+    const card = document.createElement('div');
+    card.className = 'cosmetic-card'+(equipped?' equipped':'');
+    card.style.borderColor = RARITY_COLORS[c.rarity];
+    card.innerHTML = `${cosmeticSwatchHTML(c)}<div class="cname">${c.name}</div>
+      <div class="crarity" style="color:${RARITY_COLORS[c.rarity]}">${RARITY_LABEL[c.rarity]}</div>
+      ${!owned?'<div class="lockdot">🔒</div>'+lockHintHTML(c):''}${equipped?'<div class="equipbadge">EQUIPADO</div>':''}`;
+    card.addEventListener('click', ()=>{
+      if(!owned) return;
+      profile[field] = c.id; saveProfile();
+      if(player) applyEquippedCosmetics(player);
+      renderCustomizeView();
+    });
+    gridEl.appendChild(card);
+  });
+}
+function renderCustomizeView(){
+  nameInput.value = profile.name;
+  renderCosmeticGrid(document.getElementById('colorGrid'), COSMETICS.filter(c=>c.type==='color'));
+  renderCosmeticGrid(document.getElementById('hatGrid'), COSMETICS.filter(c=>c.type==='hat'));
+  renderCosmeticGrid(document.getElementById('haloGrid'), COSMETICS.filter(c=>c.type==='halo'));
+  drawPreviewCanvas(document.getElementById('custPreview'));
+}
+
+function drawPreviewCanvas(canvas){
+  const pctx = canvas.getContext('2d');
+  const w=canvas.width, h=canvas.height;
+  pctx.clearRect(0,0,w,h);
+  const color = cosmeticById(profile.equippedColor).hex;
+  const hat = cosmeticById(profile.equippedHat);
+  const halo = cosmeticById(profile.equippedHalo);
+  const cx=w/2, cy=h/2+8, r=34;
+  pctx.save();
+  pctx.beginPath(); pctx.ellipse(cx,cy+r*0.75,r*0.9,r*0.35,0,0,Math.PI*2);
+  pctx.fillStyle='rgba(0,0,0,0.35)'; pctx.fill();
+  pctx.beginPath(); pctx.arc(cx,cy,r,0,Math.PI*2);
+  pctx.fillStyle = color; pctx.fill();
+  pctx.strokeStyle='rgba(255,255,255,0.55)'; pctx.lineWidth=2; pctx.stroke();
+  pctx.restore();
+  if(hat && hat.shape!=='none'){
+    withCtx(pctx, ()=> drawHat(hat.shape, color==='#2a2f3a'?'#5a6070':color, cx, cy-r*0.75, r));
+  }
+  if(halo && halo.shape!=='none'){
+    withCtx(pctx, ()=> drawRankHalo(halo.shape, cx, cy, r));
+  }
+}
+// drawHat/roundRect draw against the module-level `ctx` — temporarily point it at
+// a different canvas (e.g. a menu preview) so the exact same drawing code renders there too.
+function withCtx(tempCtx, fn){
+  const saved = ctx; ctx = tempCtx; fn(); ctx = saved;
+}
+
+function renderShopView(){
+  document.getElementById('shopCoins').textContent = profile.coins;
+  const grid = document.getElementById('shopGrid');
+  grid.innerHTML = '';
+  // Rank-exclusive rewards are never for sale — they're earned by reaching that rank
+  // (see grantRankRewards()) and only show up in Customize once unlocked.
+  COSMETICS.filter(c=>!c.rankReward).forEach(c=>{
+    const field = EQUIP_FIELD[c.type];
+    const owned = ownsCosmetic(c.id);
+    const equipped = profile[field]===c.id;
+    const card = document.createElement('div');
+    card.className = 'cosmetic-card';
+    card.style.borderColor = RARITY_COLORS[c.rarity];
+    card.innerHTML = `${cosmeticSwatchHTML(c)}<div class="cname">${c.name}</div>
+      <div class="crarity" style="color:${RARITY_COLORS[c.rarity]}">${RARITY_LABEL[c.rarity]}</div>
+      ${owned?'':`<div class="cprice">${c.price} 🪙</div>`}`;
+    const btn = document.createElement('button');
+    if(owned){
+      btn.className = 'equip-btn'+(equipped?' equipped':'');
+      btn.textContent = equipped? 'EQUIPADO' : 'EQUIPAR';
+      btn.disabled = equipped;
+      btn.addEventListener('click', ()=>{
+        profile[field] = c.id;
+        saveProfile(); if(player) applyEquippedCosmetics(player);
+        renderShopView();
+      });
+    } else {
+      btn.className = 'buy-btn';
+      btn.textContent = 'COMPRAR';
+      btn.disabled = profile.coins < c.price;
+      btn.addEventListener('click', ()=>{
+        if(ownsCosmetic(c.id) || profile.coins < c.price) return; // guard against double-click exploits
+        profile.coins -= c.price;
+        profile.owned.push(c.id);
+        saveProfile();
+        renderShopView();
+      });
+    }
+    card.appendChild(btn);
+    grid.appendChild(card);
+  });
+}
+
+function renderProfileView(){
+  document.getElementById('profileNameLine').textContent = displayName(profile.name);
+  document.getElementById('profCoins').textContent = profile.coins;
+  document.getElementById('profKills').textContent = profile.stats.kills;
+  document.getElementById('profWins').textContent = profile.stats.wins;
+  document.getElementById('profMatches').textContent = profile.stats.matchesPlayed;
+  document.getElementById('profOwned').textContent = profile.owned.length;
+  drawPreviewCanvas(document.getElementById('profilePreview'));
+}
+
+function renderRankedView(){
+  const prog = rankProgress(profile.ranked.points);
+  document.getElementById('rankedMenuBadge').innerHTML = rankBadgeSvg(prog.tier);
+  document.getElementById('rankedMenuTierName').textContent = prog.tier.name;
+  document.getElementById('rankedMenuTierName').style.color = prog.tier.color;
+  document.getElementById('rankedMenuFill').style.background = prog.tier.color;
+  document.getElementById('rankedMenuFill').style.width = prog.pct+'%';
+  document.getElementById('rankedMenuProgressLabel').textContent = prog.tier.max===Infinity
+    ? Math.round(profile.ranked.points)+' pts (rango máximo)'
+    : Math.round(profile.ranked.points)+' pts · faltan '+Math.round(prog.toNext)+' para el siguiente rango';
+
+  const tbody = document.getElementById('rankedLeaderboardBody');
+  tbody.innerHTML = `<tr>
+    <td>1</td><td>${displayName(profile.name)}</td><td>${Math.round(profile.ranked.points)}</td>
+    <td style="color:${prog.tier.color}">${prog.tier.name}</td><td>${profile.ranked.wins}</td><td>${profile.ranked.kills}</td>
+  </tr>`;
+}
+document.querySelectorAll('[data-ranked]').forEach(btn=>{
+  btn.addEventListener('click', ()=>{
+    document.getElementById('startScreen').classList.add('hidden');
+    resetMatch(btn.dataset.ranked);
+  });
+});
+
+document.querySelectorAll('#modeGrid .mode-btn').forEach(btn=>{
+  btn.addEventListener('click', ()=>{
+    document.getElementById('startScreen').classList.add('hidden');
+    resetMatch(btn.dataset.mode);
+  });
+});
+document.getElementById('againBtn').addEventListener('click', ()=>{
+  document.getElementById('endScreen').classList.add('hidden');
+  if(mode==='online'){ location.reload(); return; }
+  resetMatch(mode);
+});
+document.getElementById('endMenuBtn').addEventListener('click', ()=>{
+  if(mode==='online'){ location.reload(); return; } // cleanest way to drop the ws and reset online state
+  running = false;
+  document.getElementById('endScreen').classList.add('hidden');
+  document.getElementById('startScreen').classList.remove('hidden');
+  showSubview('top');
+});
+document.getElementById('rankedResultsMenuBtn').addEventListener('click', ()=>{
+  if(mode==='online'){ location.reload(); return; } // cleanest way to drop the ws and reset online state
+  running = false;
+  document.getElementById('rankedResultsScreen').classList.add('hidden');
+  document.getElementById('startScreen').classList.remove('hidden');
+  showSubview('ranked');
+});
+
+function togglePause(){
+  if(!running) return;
+  paused = !paused;
+}
+
+// ============================== ONLINE MULTIPLAYER ==============================
+// N-player rooms (2 = 1v1, 4 = 2v2 with real people). The server is still a plain
+// relay — it only matches sockets into a room and forwards messages, it does not
+// referee the match. Every fighter is self-authoritative for their own hp/shield/
+// deaths/kills and reports them in their periodic 's' broadcast; everyone else's
+// client just mirrors that. That means a modified client could lie about its own
+// stats (including coin-earning kills) — fine for playing with friends, not
+// cheat-proof. Making it cheat-proof needs a server that simulates the match
+// itself, which is a separate, much larger project (see README).
+let ws=null, myRoomCode=null, myPeerIndex=0, onlineCapacity=2, lastStateSendTime=0, lastBotStateSendTime=0;
+let onlineRankedMode = null; // null = plain online 1v1/2v2; 'rankedDuos'/'rankedTrios' = ranked-with-friends
+let remoteFighters = []; // netId -> fighter object (human peer slots AND, in ranked-with-friends, bots too); remoteFighters[myPeerIndex] === player
+let matchRng = Math.random; // seeded (from the room code) for online matches so every client builds the identical map/spawns without transmitting them
+function mulberry32(seed){
+  return function(){
+    seed |= 0; seed = (seed + 0x6D2B79F5) | 0;
+    let t = Math.imul(seed ^ (seed>>>15), 1 | seed);
+    t = (t + Math.imul(t ^ (t>>>7), 61 | t)) ^ t;
+    return ((t ^ (t>>>14)) >>> 0) / 4294967296;
+  };
+}
+function hashStringToInt(s){ let h=0; for(let i=0;i<s.length;i++){ h=(h*31 + s.charCodeAt(i))|0; } return h>>>0; }
+function onlineIsHost(){ return mode==='online' && myPeerIndex===0; }
+// Only the host ever simulates bot AI or decides team-eliminated/placement/victory
+// for a ranked-with-friends match — everyone else just mirrors what the host reports,
+// so two humans in the same match can never disagree about the outcome.
+function isMatchAuthority(){ return !onlineRankedMode || onlineIsHost(); }
+
+const mainMenuView = document.getElementById('mainMenuView');
+const onlineLobbyView = document.getElementById('onlineLobbyView');
+const lobbyStatusEl = document.getElementById('lobbyStatus');
+const roomCodeDisplay = document.getElementById('roomCodeDisplay');
+const createRoom1v1Btn = document.getElementById('createRoom1v1Btn');
+const createRoom2v2Btn = document.getElementById('createRoom2v2Btn');
+const joinRoomBtn = document.getElementById('joinRoomBtn');
+const roomCodeInput = document.getElementById('roomCodeInput');
+const rankedLobbyStatusEl = document.getElementById('rankedLobbyStatus');
+const rankedRoomCodeDisplay = document.getElementById('rankedRoomCodeDisplay');
+const createRankedDuosBtn = document.getElementById('createRankedDuosBtn');
+const createRankedTriosBtn = document.getElementById('createRankedTriosBtn');
+const joinRankedRoomBtn = document.getElementById('joinRankedRoomBtn');
+const rankedRoomCodeInput = document.getElementById('rankedRoomCodeInput');
+
+let lobbyContext = 'plain'; // 'plain' or 'ranked' — which lobby UI the current ws session belongs to
+function setLobbyStatus(txt){
+  (lobbyContext==='ranked'? rankedLobbyStatusEl : lobbyStatusEl).textContent = txt;
+}
+function setLobbyButtonsDisabled(v){
+  createRoom1v1Btn.disabled=v; createRoom2v2Btn.disabled=v; joinRoomBtn.disabled=v;
+  createRankedDuosBtn.disabled=v; createRankedTriosBtn.disabled=v; joinRankedRoomBtn.disabled=v;
+}
+
+document.getElementById('onlineBtn').addEventListener('click', ()=>{
+  mainMenuView.classList.add('hidden');
+  onlineLobbyView.classList.remove('hidden');
+  setLobbyStatus('');
+});
+document.getElementById('lobbyBackBtn').addEventListener('click', ()=>{
+  onlineLobbyView.classList.add('hidden');
+  mainMenuView.classList.remove('hidden');
+  if(ws){ ws.onclose=null; ws.close(); ws=null; }
+  roomCodeDisplay.classList.add('hidden');
+});
+
+function connectWS(onOpen){
+  setLobbyStatus('Conectando al servidor…');
+  setLobbyButtonsDisabled(true);
+  const proto = location.protocol==='https:' ? 'wss://':'ws://';
+  try{ ws = new WebSocket(proto+location.host+'/ws'); }
+  catch(e){ setLobbyStatus('No se pudo conectar al servidor.'); return; }
+  ws.onopen = ()=>{
+    setLobbyButtonsDisabled(false);
+    setLobbyStatus('Conectado.');
+    if(onOpen) onOpen();
+  };
+  ws.onclose = ()=>{ onlineDisconnected(); };
+  ws.onerror = ()=>{ setLobbyStatus('No se pudo conectar al servidor.'); };
+  ws.onmessage = (ev)=>{
+    let msg; try{ msg = JSON.parse(ev.data); }catch(e){ return; }
+    handleWSMessage(msg);
+  };
+}
+
+createRoom1v1Btn.addEventListener('click', ()=>{
+  lobbyContext='plain';
+  const doCreate = ()=> ws.send(JSON.stringify({type:'create', capacity:2}));
+  if(ws && ws.readyState===1) doCreate(); else connectWS(doCreate);
+});
+createRoom2v2Btn.addEventListener('click', ()=>{
+  lobbyContext='plain';
+  const doCreate = ()=> ws.send(JSON.stringify({type:'create', capacity:4}));
+  if(ws && ws.readyState===1) doCreate(); else connectWS(doCreate);
+});
+joinRoomBtn.addEventListener('click', ()=>{
+  lobbyContext='plain';
+  const code = roomCodeInput.value.trim().toUpperCase();
+  if(!code){ setLobbyStatus('Escribe un código de sala.'); return; }
+  const doJoin = ()=> ws.send(JSON.stringify({type:'join', room:code}));
+  if(ws && ws.readyState===1) doJoin(); else connectWS(doJoin);
+});
+createRankedDuosBtn.addEventListener('click', ()=>{
+  lobbyContext='ranked';
+  const doCreate = ()=> ws.send(JSON.stringify({type:'create', capacity:2, rankedMode:'rankedDuos'}));
+  if(ws && ws.readyState===1) doCreate(); else connectWS(doCreate);
+});
+createRankedTriosBtn.addEventListener('click', ()=>{
+  lobbyContext='ranked';
+  const doCreate = ()=> ws.send(JSON.stringify({type:'create', capacity:3, rankedMode:'rankedTrios'}));
+  if(ws && ws.readyState===1) doCreate(); else connectWS(doCreate);
+});
+joinRankedRoomBtn.addEventListener('click', ()=>{
+  lobbyContext='ranked';
+  const code = rankedRoomCodeInput.value.trim().toUpperCase();
+  if(!code){ setLobbyStatus('Escribe un código de sala.'); return; }
+  const doJoin = ()=> ws.send(JSON.stringify({type:'join', room:code}));
+  if(ws && ws.readyState===1) doJoin(); else connectWS(doJoin);
+});
+
+function handleWSMessage(msg){
+  switch(msg.type){
+    case 'created':
+      myRoomCode = msg.room; onlineCapacity = msg.capacity; onlineRankedMode = msg.rankedMode||null;
+      if(lobbyContext==='ranked'){
+        setLobbyStatus('Sala creada ('+RANKED_MODE_CONFIG[onlineRankedMode].label+' con amigos) — comparte este código:');
+        rankedRoomCodeDisplay.textContent = myRoomCode;
+        rankedRoomCodeDisplay.classList.remove('hidden');
+      } else {
+        setLobbyStatus('Sala creada ('+(msg.capacity===4?'2v2':'1v1')+') — comparte este código:');
+        roomCodeDisplay.textContent = myRoomCode;
+        roomCodeDisplay.classList.remove('hidden');
+      }
+      break;
+    case 'joined':
+      myRoomCode = msg.room; onlineCapacity = msg.capacity; onlineRankedMode = msg.rankedMode||null;
+      setLobbyStatus(msg.waiting
+        ? 'Unido a la sala '+msg.room+'. Esperando más jugadores…'
+        : 'Unido a la sala '+msg.room+'. Iniciando…');
+      break;
+    case 'notfound':
+      setLobbyStatus('No existe ninguna sala con ese código.');
+      break;
+    case 'full':
+      setLobbyStatus('Esa sala ya está completa.');
+      break;
+    case 'ready':
+      myPeerIndex = msg.you; onlineCapacity = msg.capacity; onlineRankedMode = msg.rankedMode||null;
+      document.getElementById('startScreen').classList.add('hidden');
+      resetMatch('online');
+      setConnStatus('Conectado', true);
+      break;
+    case 'peerLeft':
+      onlinePeerLeft();
+      break;
+    case 'game':
+      handleGameMessage(msg.data);
+      break;
+  }
+}
+
+function sendGame(data){
+  if(ws && ws.readyState===1){ data.from = myPeerIndex; ws.send(JSON.stringify({type:'game', data})); }
+}
+// Like sendGame, but stamps an explicit netId instead of myPeerIndex — needed whenever
+// the host reports something a locally-simulated BOT did (a hit, a build), since the
+// event didn't come from the host's own player.
+function sendGameAs(netId, data){
+  if(ws && ws.readyState===1){ data.from = netId; ws.send(JSON.stringify({type:'game', data})); }
+}
+
+function handleGameMessage(data){
+  const from = remoteFighters[data.from];
+  switch(data.k){
+    case 's': {
+      if(!from || from===player) break;
+      from.hp = data.hp; from.alive = data.alive; from.deaths = data.deaths; from.kills = data.kills||0;
+      from.shield = data.shield||0;
+      from.weaponIdx = data.weaponIdx; from.buildIdx = data.buildIdx; from.reloading = data.reloading;
+      from.channelProgress = data.channelProgress!=null? data.channelProgress : null;
+      from.channelType = data.channelType||null;
+      if(data.name) from.name = data.name;
+      if(data.tier) from.rankTierId = data.tier;
+      from.netTarget = {x:data.x, y:data.y, angle:data.angle};
+      break;
+    }
+    case 'h':
+      if(mode!=='online' || !from) break;
+      if(data.target===myPeerIndex){
+        damageFighter(player, data.dmg, data.x, data.y, from, true);
+      } else if(onlineIsHost() && data.target>=onlineCapacity){
+        // A friend's shot landed on a bot — only the host runs that bot's AI/hp, so
+        // the host is the one client that must actually apply the damage.
+        const targetBot = remoteFighters[data.target];
+        if(targetBot) damageFighter(targetBot, data.dmg, data.x, data.y, from, true);
+      }
+      break;
+    case 'rk': {
+      // Host-authoritative ranked-with-friends match progress (see isMatchAuthority());
+      // every non-host human applies the host's decision instead of computing its own.
+      if(!rankedMatch) break;
+      if(data.ev==='milestone') applyRankedMilestone(data.thresh, data.pts);
+      else if(data.ev==='end') applyRankedMatchEnd(data.placement);
+      break;
+    }
+    case 'b': {
+      const k = cellKey(data.cx, data.cy);
+      if(!solids.has(k) && data.cx>=0 && data.cy>=0 && data.cx<COLS && data.cy<ROWS){
+        solids.set(k, {cx:data.cx, cy:data.cy, type:data.pieceType, hp:data.hp, maxHp:data.hp, half:data.half, owner:from||null, hex:data.hex});
+      }
+      break;
+    }
+    case 'dp': {
+      const p = solids.get(cellKey(data.cx, data.cy));
+      if(p){
+        p.hp -= data.dmg;
+        spawnSparks(data.cx*CELL+CELL/2, data.cy*CELL+CELL/2, '#c7cedb', 4);
+        if(p.hp<=0){ solids.delete(cellKey(data.cx,data.cy)); spawnSparks(data.cx*CELL+CELL/2, data.cy*CELL+CELL/2, '#8b95aa', 12); }
+      }
+      break;
+    }
+    case 'pk': {
+      // rival collected this pickup on their client — remove it here too, no inventory granted
+      const pk = pickups.find(p=>p.id===data.id);
+      if(pk && pk.active){ pk.active=false; pk.respawnAt = time+PICKUP_RESPAWN_MS; }
+      break;
+    }
+  }
+}
+
+function setConnStatus(txt, ok){
+  const el = document.getElementById('connStatus');
+  el.textContent = txt;
+  el.className = ok? 'ok':'bad';
+}
+
+function onlinePeerLeft(){
+  if(mode==='online' && running){
+    running = false;
+    showDisconnectScreen();
+  } else {
+    setLobbyStatus('Alguien se desconectó de la sala. Puedes crear o unirte a otra.');
+  }
+}
+function onlineDisconnected(){
+  if(mode==='online' && running){
+    running = false;
+    setConnStatus('Desconectado', false);
+    showDisconnectScreen();
+  } else if(!onlineLobbyView.classList.contains('hidden')){
+    setLobbyStatus('Se perdió la conexión con el servidor.');
+    setLobbyButtonsDisabled(false);
+  }
+}
+function showDisconnectScreen(){
+  const endScreen = document.getElementById('endScreen');
+  const endPanel = document.getElementById('endPanel');
+  endPanel.classList.remove('lose');
+  document.getElementById('endEyebrow').textContent = 'CONEXIÓN PERDIDA';
+  document.getElementById('endTitle').textContent = 'DUELO INTERRUMPIDO';
+  const enemyTeam = activeFighters.map(f=>f.team).find(t=>t!==player.team);
+  document.getElementById('statKills').textContent = teamKills(enemyTeam!=null?enemyTeam:1);
+  document.getElementById('statDeaths').textContent = player.deaths||0;
+  const acc = player.shotsFired? Math.round(player.shotsHit/player.shotsFired*100):0;
+  document.getElementById('statShots').textContent = acc+'%';
+  endScreen.classList.remove('hidden');
+}
+
+// ============================== GEOMETRY HELPERS ==============================
+function worldToCell(x,y){ return [Math.floor(x/CELL), Math.floor(y/CELL)]; }
+
+function solidAt(cx,cy){
+  if(cx<0||cy<0||cx>=COLS||cy>=ROWS) return {cx,cy,type:'bound',hp:9999,maxHp:9999,half:false,hex:'#000'};
+  return solids.get(cellKey(cx,cy));
+}
+
+function circleRectResolve(x,y,r,rx,ry,rw,rh){
+  const nx = Math.max(rx, Math.min(x, rx+rw));
+  const ny = Math.max(ry, Math.min(y, ry+rh));
+  const dx = x-nx, dy = y-ny;
+  const distSq = dx*dx+dy*dy;
+  if(distSq < r*r){
+    const dist = Math.sqrt(distSq)||0.0001;
+    const push = (r-dist);
+    return {x: x+ (dx/dist)*push, y: y+(dy/dist)*push, hit:true};
+  }
+  return {x,y,hit:false};
+}
+
+function resolveMovement(f, nx, ny){
+  const cx0=Math.floor((nx-PLAYER_R)/CELL), cx1=Math.floor((nx+PLAYER_R)/CELL);
+  const cy0=Math.floor((ny-PLAYER_R)/CELL), cy1=Math.floor((ny+PLAYER_R)/CELL);
+  let x=nx,y=ny;
+  for(let cx=cx0; cx<=cx1; cx++){
+    for(let cy=cy0; cy<=cy1; cy++){
+      const p = solidAt(cx,cy);
+      if(!p) continue;
+      const inset = p.half? CELL*0.28 : 0;
+      const rx=cx*CELL+inset, ry=cy*CELL+inset, rw=CELL-inset*2, rh=CELL-inset*2;
+      const r = circleRectResolve(x,y,PLAYER_R,rx,ry,rw,rh);
+      x=r.x; y=r.y;
+    }
+  }
+  x = Math.max(PLAYER_R, Math.min(WORLD_W-PLAYER_R, x));
+  y = Math.max(PLAYER_R, Math.min(WORLD_H-PLAYER_R, y));
+  return [x,y];
+}
+
+// segment-vs-solids sampling, returns {hit, x,y, piece} or {hit:false}
+function raySolids(x0,y0,angle,maxRange,ownerFighter,step){
+  step = step||10;
+  const dx=Math.cos(angle), dy=Math.sin(angle);
+  let x=x0,y=y0;
+  for(let d=0; d<maxRange; d+=step){
+    x = x0+dx*d; y = y0+dy*d;
+    if(x<0||y<0||x>=WORLD_W||y>=WORLD_H) return {hit:true,x,y,kind:'bound'};
+    const [cx,cy] = worldToCell(x,y);
+    const p = solidAt(cx,cy);
+    if(p){
+      const inset = p.half? CELL*0.28:0;
+      if(x>=cx*CELL+inset && x<=cx*CELL+CELL-inset && y>=cy*CELL+inset && y<=cy*CELL+CELL-inset){
+        return {hit:true,x,y,kind:'piece',piece:p};
+      }
+    }
+    for(const f of activeFighters){
+      if(!f.alive || f===ownerFighter || f.team===ownerFighter.team) continue;
+      const ddx=x-f.x, ddy=y-f.y;
+      if(ddx*ddx+ddy*ddy <= PLAYER_R*PLAYER_R){
+        return {hit:true,x,y,kind:'fighter',fighter:f};
+      }
+    }
+  }
+  return {hit:false,x,y};
+}
+
+function damagePiece(p, dmg, x, y){
+  p.hp -= dmg;
+  spawnSparks(x,y,'#c7cedb',5);
+  if(mode==='online') sendGame({k:'dp', cx:p.cx, cy:p.cy, dmg});
+  if(p.hp<=0){
+    solids.delete(cellKey(p.cx,p.cy));
+    spawnSparks(p.cx*CELL+CELL/2, p.cy*CELL+CELL/2, '#8b95aa', 14);
+  }
+}
+
+function damageFighter(target, dmg, hitX, hitY, attacker, fromNetwork){
+  if(!target.alive) return;
+  if(attacker && attacker.team===target.team) return; // no friendly fire, ever
+  target.usingItem = null; target.channelProgress = null; // any hit interrupts shielding/healing
+  let remaining = dmg;
+  if(target.shield>0){
+    const absorbed = Math.min(target.shield, remaining);
+    target.shield -= absorbed;
+    remaining -= absorbed;
+  }
+  target.hp -= remaining;
+  target.lastHitTime = time;
+  spawnSparks(hitX,hitY, target===player? '#ff8a5c':'#ff5c74', 8);
+  floatTexts.push({x:hitX,y:hitY,txt:'-'+Math.round(dmg),t:0,color: attacker&&attacker.isBot? '#ff3b5c':'#ffd166'});
+  if(mode==='online' && target!==player && !fromNetwork){
+    // Only re-broadcast a hit we simulated ourselves (our own shot, or — for the host —
+    // one of our bots' shots); a hit we're merely applying FROM the network must not
+    // bounce back out, or host and friends would echo the same hit forever.
+    const targetIdx = remoteFighters.indexOf(target);
+    const attackerNetId = attacker===player? myPeerIndex : (attacker? remoteFighters.indexOf(attacker) : -1);
+    if(targetIdx>=0 && attackerNetId>=0) sendGameAs(attackerNetId, {k:'h', target:targetIdx, dmg, x:hitX, y:hitY});
+  }
+  if(target.hp<=0){
+    target.hp = 0; target.alive = false; target.deaths++;
+    if(attacker){
+      attacker.kills++;
+      if(attacker===player) awardElimination();
+    }
+    spawnSparks(target.x,target.y,'#ffffff',26);
+    if(isAnyRankedMatch()){
+      handleRankedDeath(target);
+    } else {
+      scheduleRespawn(target);
+      checkWinner(attacker);
+    }
+  }
+}
+
+// Coins are only ever granted here, and only for the LOCAL player's own confirmed
+// kills (attacker===player) — a bot's kills never touch the wallet, and this is the
+// single call site for the reward, so one elimination can't pay out twice.
+function awardElimination(){
+  profile.coins += KILL_COIN_REWARD;
+  profile.stats.kills++;
+  if(isAnyRankedMatch() && rankedMatch && !rankedMatch.ended){
+    profile.ranked.points += KILL_RANKED_POINTS;
+    rankedMatch.eliminationPoints += KILL_RANKED_POINTS;
+    rankedMatch.pointsThisMatch += KILL_RANKED_POINTS;
+    saveProfile();
+    grantRankRewards(true); // silent — the elimination toast below is the feedback here
+    showToast('ELIMINATION  +'+KILL_COIN_REWARD+' 🪙 · +'+KILL_RANKED_POINTS+' Ranked Points');
+    return;
+  }
+  saveProfile();
+  showEliminationToast();
+}
+function showToast(text){
+  const el = document.getElementById('eliminationToast');
+  el.textContent = text;
+  el.classList.remove('show'); void el.offsetWidth; el.classList.add('show');
+  clearTimeout(el._hideT);
+  el._hideT = setTimeout(()=>el.classList.remove('show'), 1600);
+}
+function showEliminationToast(){
+  showToast('ELIMINATION +'+KILL_COIN_REWARD+' 🪙');
+}
+
+function checkWinner(attacker){
+  if(mode==='practice') return;
+  const need = killsToWinFor(mode);
+  const myTeam = teamKills(player.team);
+  const otherTeams = Array.from(new Set(activeFighters.map(f=>f.team))).filter(t=>t!==player.team);
+  const enemyTeam = Math.max(0, ...otherTeams.map(t=>teamKills(t)));
+  if(myTeam>=need || enemyTeam>=need){
+    winner = myTeam>enemyTeam? 'player':'bot';
+    running = false;
+    profile.stats.matchesPlayed++;
+    if(winner==='player') profile.stats.wins++;
+    saveProfile();
+    setTimeout(showEndScreen, 900);
+  }
+}
+
+function scheduleRespawn(f){
+  if(mode==='practice' && f.isDummyOff) return;
+  if(mode==='online' && f!==player) return;
+  respawnTimers.push({f, at: time+1650});
+}
+
+// ============================== RANKED: TEAM ELIMINATION / PLACEMENT ==============================
+function teamsRemainingCount(){
+  const teams = new Set();
+  activeFighters.forEach(f=>{ if(f.alive) teams.add(f.team); });
+  return teams.size;
+}
+function handleRankedDeath(target){
+  if(!rankedMatch || rankedMatch.ended) return;
+  // In ranked-with-friends, only the host actually tracks real team-elimination state
+  // (bots only truly exist on the host) — friends wait for the host's 'rk' broadcast
+  // instead of trying to decide placement/milestones from their own mirrored view.
+  if(!isMatchAuthority()) return;
+  const remaining = teamsRemainingCount();
+  if(remaining===1){
+    const onlyTeam = activeFighters.find(f=>f.alive).team;
+    if(onlyTeam===player.team){ endRankedMatch(1); return; }
+  }
+  const myTeamAlive = activeFighters.some(f=>f.team===player.team && f.alive);
+  if(!myTeamAlive){ endRankedMatch(remaining+1); return; }
+  updateRankedMilestones(remaining);
+}
+// Decides which milestones just got hit (authority only) and applies+broadcasts each one.
+function updateRankedMilestones(remaining){
+  [[10,20],[5,30],[3,30]].forEach(([thresh,pts])=>{
+    if(remaining<=thresh && !rankedMatch.milestonesHit.has(thresh)){
+      applyRankedMilestone(thresh, pts);
+      if(onlineRankedMode) sendGame({k:'rk', ev:'milestone', thresh, pts});
+    }
+  });
+}
+// Actually grants a milestone's points to THIS client's own profile — called directly by
+// the authority, and replayed by every other human client off the host's 'rk' broadcast.
+function applyRankedMilestone(thresh, pts){
+  if(!rankedMatch || rankedMatch.milestonesHit.has(thresh)) return;
+  rankedMatch.milestonesHit.add(thresh);
+  rankedMatch.placementPoints += pts;
+  rankedMatch.pointsThisMatch += pts;
+  profile.ranked.points += pts;
+  saveProfile();
+  grantRankRewards(true); // silent — the milestone toast below is the feedback here
+  showToast('TOP '+thresh+'  +'+pts+' Ranked Points');
+}
+// Decides the match is over (authority only) and applies+broadcasts it.
+function endRankedMatch(placement){
+  if(!rankedMatch || rankedMatch.ended) return;
+  applyRankedMatchEnd(placement);
+  if(onlineRankedMode) sendGame({k:'rk', ev:'end', placement});
+}
+// Actually closes out the match for THIS client's own profile/stats — called directly by
+// the authority, and replayed by every other human client off the host's 'rk' broadcast.
+function applyRankedMatchEnd(placement){
+  if(!rankedMatch || rankedMatch.ended) return;
+  rankedMatch.ended = true;
+  running = false;
+  const beforePoints = profile.ranked.points - rankedMatch.pointsThisMatch; // pointsThisMatch so far = -entryCost + placement milestones hit mid-match
+  if(placement===1){
+    rankedMatch.placementPoints += 50;
+    rankedMatch.pointsThisMatch += 50;
+    profile.ranked.points += 50;
+  }
+  profile.ranked.points = Math.max(0, profile.ranked.points);
+  profile.ranked.matches++;
+  profile.ranked.kills += player.kills;
+  if(placement===1) profile.ranked.wins++;
+  if(profile.ranked.bestPlacement==null || placement<profile.ranked.bestPlacement) profile.ranked.bestPlacement = placement;
+  rankedMatch.placement = placement;
+  rankedMatch.beforePoints = Math.max(0, beforePoints);
+  rankedMatch.afterPoints = profile.ranked.points;
+  rankedMatch.beforeTier = rankTierFor(rankedMatch.beforePoints);
+  rankedMatch.afterTier = rankTierFor(profile.ranked.points);
+  rankedMatch.rankedUp = rankTierIndex(rankedMatch.afterTier.id) > rankTierIndex(rankedMatch.beforeTier.id);
+  saveProfile();
+  grantRankRewards();
+  setTimeout(showRankedResultsScreen, 900);
+}
+
+// ============================== FIRE / BUILD ==============================
+function currentWeapon(f){ return WEAPONS[f.weaponIdx]; }
+
+function canFire(f){
+  if(!f.alive) return false;
+  if(f.reloading) return false;
+  const w = currentWeapon(f);
+  if(f.clip[f.weaponIdx]<=0) return false;
+  return (time-f.lastFire) >= w.fireRate;
+}
+
+function tryReload(f){
+  if(!f.alive || f.reloading) return;
+  const w = currentWeapon(f);
+  const idx = f.weaponIdx;
+  if(f.clip[idx]>=w.clip) return;
+  if(f.reserve[idx]<=0) return;
+  f.reloading = true;
+  f.reloadEnd = time + w.reload;
+}
+
+function finishReloadIfDue(f){
+  if(f.reloading && time>=f.reloadEnd){
+    const w = currentWeapon(f); const idx=f.weaponIdx;
+    if(w.perShell){
+      const need = w.clip - f.clip[idx];
+      const give = Math.min(1, need, f.reserve[idx]);
+      f.clip[idx]+=give; f.reserve[idx]-=give;
+      if(f.clip[idx]<w.clip && f.reserve[idx]>0){ f.reloadEnd = time+w.reload; }
+      else f.reloading=false;
+    } else {
+      const need = w.clip - f.clip[idx];
+      const give = Math.min(need, f.reserve[idx]);
+      f.clip[idx]+=give; f.reserve[idx]-=give;
+      f.reloading=false;
+    }
+  }
+}
+
+function fireWeapon(f){
+  const w = currentWeapon(f);
+  f.lastFire = time;
+  f.clip[f.weaponIdx]--;
+  f.shotsFired++;
+  const muzzX = f.x+Math.cos(f.angle)*(PLAYER_R+6);
+  const muzzY = f.y+Math.sin(f.angle)*(PLAYER_R+6);
+  particles.push({x:muzzX,y:muzzY,vx:0,vy:0,life:80,maxLife:80,size:14,color:w.color,type:'flash'});
+
+  for(let i=0;i<w.pellets;i++){
+    const spread = (Math.random()-0.5)*2*w.spread;
+    const ang = f.angle+spread;
+    if(w.hitscan){
+      const res = raySolids(muzzX,muzzY,ang,w.range,f,8);
+      beams.push({x1:muzzX,y1:muzzY,x2:res.x,y2:res.y,t:0,color:w.color});
+      if(res.hit){
+        if(res.kind==='piece') damagePiece(res.piece,9999,res.x,res.y);
+        else if(res.kind==='fighter'){ damageFighter(res.fighter, w.dmg, res.x,res.y, f); f.shotsHit++; }
+      }
+    } else {
+      bullets.push({
+        x:muzzX,y:muzzY, vx:Math.cos(ang)*w.speed, vy:Math.sin(ang)*w.speed,
+        dmg:w.dmg, owner:f, life:w.range/w.speed*1000, color:w.color, trail:[]
+      });
+    }
+  }
+}
+
+function placeBuild(f){
+  const bIdx = f.buildIdx;
+  if(bIdx<0) return;
+  const b = BUILDS[bIdx];
+  if(time-f.lastBuild < 130) return;
+  if(f.mats < b.cost) return;
+  let cx,cy;
+  if(b.self){
+    [cx,cy] = worldToCell(f.x,f.y);
+  } else {
+    const dirx = Math.round(Math.cos(f.angle));
+    const diry = Math.round(Math.sin(f.angle));
+    const [pcx,pcy] = worldToCell(f.x,f.y);
+    cx = pcx + (dirx!==0? dirx : 0);
+    cy = pcy + (diry!==0? diry : (dirx===0?1:0));
+    if(dirx===0 && diry===0) cy = pcy+1;
+  }
+  if(cx<0||cy<0||cx>=COLS||cy>=ROWS) return;
+  const k = cellKey(cx,cy);
+  if(solids.has(k)) return;
+  solids.set(k, {cx,cy,type:b.id,hp:b.hp,maxHp:b.hp,half:b.half,owner:f,hex:b.hex});
+  f.mats -= b.cost;
+  f.lastBuild = time;
+  spawnSparks(cx*CELL+CELL/2, cy*CELL+CELL/2, b.hex, 10);
+  if(mode==='online' && (f===player || (f.isBot && onlineIsHost()))){
+    sendGame({k:'b', cx, cy, pieceType:b.id, hp:b.hp, half:b.half, hex:b.hex});
+  }
+}
+
+function pickAt(f){
+  if(time-f.lastPick<220) return;
+  f.lastPick = time;
+  const range = 90;
+  const res = raySolids(f.x,f.y,f.angle,range,f,6);
+  if(res.hit && res.kind==='piece'){
+    damagePiece(res.piece, 90, res.x,res.y);
+  }
+}
+
+// ============================== CONSUMABLES (shield / heal) ==============================
+// Modular by design: add a new entry to CONSUMABLES + a case in applyConsumableEffect()
+// to support future items — everything else (slot, stacking, channel, cancel-on-damage,
+// cancel-on-switch) is generic and needs no further changes.
+function applyConsumableEffect(f, c){
+  if(c.id==='shield'){ f.shield = Math.min(f.maxShield, f.shield+25); }
+  else if(c.id==='medkit'){ f.hp = f.maxHp; }
+}
+function consumableUsable(f, c){
+  if(c.id==='shield') return f.shield < f.maxShield;
+  if(c.id==='medkit') return f.hp < f.maxHp;
+  return true;
+}
+function triggerFeedbackPulse(color){
+  const el = document.getElementById('feedbackPulse');
+  el.style.boxShadow = `inset 0 0 160px 30px ${color}`;
+  el.classList.remove('show'); void el.offsetWidth; el.classList.add('show');
+}
+
+function updateConsumableChannel(f, holding){
+  const idx = f.consumableIdx;
+  if(idx<0 || !f.alive){
+    if(f.usingItem){ f.usingItem=null; }
+    f.channelProgress = null;
+    return;
+  }
+  const c = CONSUMABLES[idx];
+  const have = f.inventory[c.id]||0;
+  if(!holding || have<=0 || !consumableUsable(f,c)){
+    f.usingItem = null; f.channelProgress = null;
+    return;
+  }
+  if(!f.usingItem || f.usingItem.type!==c.id){
+    f.usingItem = {type:c.id, start:time, duration:c.useTime};
+  }
+  const elapsed = time - f.usingItem.start;
+  f.channelProgress = Math.min(1, elapsed/f.usingItem.duration);
+  if(elapsed >= f.usingItem.duration){
+    applyConsumableEffect(f, c);
+    f.inventory[c.id] = have-1;
+    f.usingItem = null; f.channelProgress = null;
+    spawnSparks(f.x,f.y, c.hex, 18);
+    floatTexts.push({x:f.x,y:f.y-40,txt: c.id==='shield'?'+25 ESCUDO':'+VIDA', t:0, color:c.hex});
+    if(f===player) triggerFeedbackPulse(c.id==='shield'? 'rgba(57,199,255,.35)':'rgba(107,255,160,.35)');
+  }
+}
+
+function spawnSparks(x,y,color,n){
+  for(let i=0;i<n;i++){
+    const a = Math.random()*Math.PI*2, sp = 60+Math.random()*160;
+    particles.push({x,y,vx:Math.cos(a)*sp,vy:Math.sin(a)*sp,life:280+Math.random()*220,maxLife:500,size:2+Math.random()*2,color,type:'spark'});
+  }
+}
+
+// ============================== BOT AI (solo modes only) ==============================
+// Nearest living fighter on a different team — the shared "who should I shoot"
+// query for every bot, in 1v1 or in team modes with several possible targets.
+function nearestEnemyOf(self){
+  let best=null, bestD=Infinity;
+  activeFighters.forEach(f=>{
+    if(f===self || !f.alive || f.team===self.team) return;
+    const d = Math.hypot(f.x-self.x, f.y-self.y);
+    if(d<bestD){ bestD=d; best=f; }
+  });
+  return best;
+}
+function nearestActivePickupFor(self, maxRange){
+  let best=null, bestD=maxRange;
+  pickups.forEach(pk=>{
+    if(!pk.active) return;
+    const c = CONSUMABLES.find(cc=>cc.id===pk.type);
+    if((self.inventory[pk.type]||0) >= c.maxStack) return;
+    const d = Math.hypot(pk.x-self.x, pk.y-self.y);
+    if(d<bestD){ bestD=d; best=pk; }
+  });
+  return best;
+}
+
+function botThink(self, dt){
+  if(!self.alive || !self.isBot) return;
+  if(mode==='practice' || (mode==='online' && !onlineIsHost())) return;
+  const diff = activeBotDiff || DIFF.normal;
+  self.speed = 220*diff.speed;
+  if(time < self.aiNextDecision) return;
+  self.aiNextDecision = time + diff.reaction;
+
+  const target = nearestEnemyOf(self);
+  self.aiTarget = target;
+  if(!target){
+    self.aiState='wander'; self._wantFire=false;
+    const loot = nearestActivePickupFor(self, 1400);
+    if(loot){ self._moveDir = Math.atan2(loot.y-self.y, loot.x-self.x); }
+    else if(time>=(self.aiNextWander||0)){ self._moveDir = Math.random()*Math.PI*2; self.aiNextWander = time+1200+Math.random()*1200; }
+    return;
+  }
+
+  const ddx = target.x-self.x, ddy=target.y-self.y;
+  const dist = Math.hypot(ddx,ddy);
+  const losRes = raySolids(self.x,self.y, Math.atan2(ddy,ddx), dist-4, self, 12);
+  const hasLOS = !losRes.hit || losRes.kind==='fighter';
+
+  // Survival first: patch up when it's safe to, instead of only reacting to damage.
+  self._consumeDecision = null;
+  const noImmediateThreat = !hasLOS || dist>280;
+  const useItems = Math.random()<diff.itemUse;
+  if(self.hp < 60 && (self.inventory.medkit||0)>0 && noImmediateThreat && useItems){
+    self._consumeDecision = 'medkit';
+  } else if(self.shield < 25 && (self.inventory.shield||0)>0 && noImmediateThreat && useItems){
+    self._consumeDecision = 'shield';
+  }
+
+  const fleeHp = diff.fleeHp!=null? diff.fleeHp : 35;
+  if(self.hp < fleeHp && Math.random()<diff.buildChance+0.2){
+    self.aiState = 'cover'; // better ranks flee/wall-off more decisively at low hp
+  } else if(self._consumeDecision){
+    self.aiState = 'heal';
+  } else if(hasLOS && dist<diff.engageRange){
+    self.aiState = Math.random()<0.35? 'strafe':'engage';
+  } else {
+    self.aiState = 'approach';
+  }
+
+  if(self.aiState==='cover' && self.mats>=BUILDS[0].cost){
+    self.buildIdx = 0;
+    self.angle = Math.atan2(ddy,ddx)+Math.PI; // build between self and target
+    placeBuild(self);
+    self.buildIdx=-1;
+  } else if(hasLOS && dist<diff.engageRange+100 && Math.random()<diff.buildChance*0.4 && self.mats>=20){
+    self.buildIdx = 0;
+    self.angle = Math.atan2(ddy,ddx);
+    placeBuild(self);
+    self.buildIdx=-1;
+  }
+
+  // Loot toward a nearby consumable when there's no pressing fight to run to.
+  const loot = (self.aiState==='approach' || self.aiState==='wander') ? nearestActivePickupFor(self, diff.engageRange) : null;
+
+  self._moveDir = self.aiState==='heal'? Math.atan2(ddy,ddx)+Math.PI :
+                  self.aiState==='cover'? Math.atan2(ddy,ddx)+Math.PI : // actively flee while walling off
+                  loot? Math.atan2(loot.y-self.y, loot.x-self.x) :
+                  self.aiState==='approach'? Math.atan2(ddy,ddx) :
+                  self.aiState==='engage'? Math.atan2(ddy,ddx) :
+                  Math.atan2(ddy,ddx) + Math.PI/2*(Math.random()<0.5?1:-1);
+  self._wantFire = self.aiState!=='heal' && hasLOS && dist < (WEAPONS[self.weaponIdx].range) && Math.random()<diff.fireChance;
+  if(dist<300) self.weaponIdx = 1; else if(dist<700) self.weaponIdx = Math.random()<0.5?3:2; else self.weaponIdx=4;
+  self._aimNoise = (Math.random()-0.5)*2*(1-diff.aim)*0.5;
+}
+
+function botAct(self, dt){
+  if(!self.alive || !self.isBot) return;
+  if(mode==='practice' || (mode==='online' && !onlineIsHost())) return;
+
+  // Consumable channel reuses the exact same generic system the player uses.
+  if(self._consumeDecision){
+    self.consumableIdx = CONSUMABLES.findIndex(c=>c.id===self._consumeDecision);
+    updateConsumableChannel(self, true);
+  } else if(self.consumableIdx>=0){
+    self.consumableIdx = -1;
+    updateConsumableChannel(self, false);
+  }
+
+  const target = self.aiTarget;
+  if(target && target.alive){
+    const ddx=target.x-self.x, ddy=target.y-self.y;
+    const dist = Math.hypot(ddx,ddy);
+    const targetAngle = Math.atan2(ddy,ddx) + (self._aimNoise||0);
+    let da = targetAngle-self.angle;
+    while(da>Math.PI) da-=Math.PI*2; while(da<-Math.PI) da+=Math.PI*2;
+    self.angle += da*Math.min(1, 8*dt);
+
+    if(!self.usingItem){
+      let mdx=0,mdy=0;
+      if(self._moveDir!=null){
+        mdx = Math.cos(self._moveDir); mdy = Math.sin(self._moveDir);
+        if(dist<180 && self.aiState!=='cover' && self.aiState!=='heal'){ mdx=-Math.cos(targetAngle); mdy=-Math.sin(targetAngle); }
+      }
+      const spd = self.speed*dt;
+      const [nx,ny] = resolveMovement(self, self.x+mdx*spd, self.y+mdy*spd);
+      self.x=nx; self.y=ny;
+    }
+
+    finishReloadIfDue(self);
+    if(self._wantFire && canFire(self) && Math.abs(da)<0.5){
+      fireWeapon(self);
+    }
+  } else if(!self.usingItem && self._moveDir!=null){
+    const spd = self.speed*dt;
+    const [nx,ny] = resolveMovement(self, self.x+Math.cos(self._moveDir)*spd, self.y+Math.sin(self._moveDir)*spd);
+    self.x=nx; self.y=ny;
+    finishReloadIfDue(self);
+  }
+  if(self.clip[self.weaponIdx]<=0) tryReload(self);
+}
+
+// ============================== NETWORK PEER SMOOTHING (online only) ==============================
+function updateNetworkPeer(dt){
+  if(mode!=='online') return;
+  const k = Math.min(1, dt*14);
+  remoteFighters.forEach(f=>{
+    if(!f || f===player || !f.netTarget) return;
+    const t = f.netTarget;
+    f.x += (t.x-f.x)*k;
+    f.y += (t.y-f.y)*k;
+    let da = t.angle-f.angle;
+    while(da>Math.PI) da-=Math.PI*2; while(da<-Math.PI) da+=Math.PI*2;
+    f.angle += da*k;
+  });
+}
+
+function sendMyStateIfDue(){
+  if(mode!=='online') return;
+  if(time-lastStateSendTime < 55) return;
+  lastStateSendTime = time;
+  sendGame({k:'s', x:player.x, y:player.y, angle:player.angle, hp:player.hp, alive:player.alive,
+             deaths:player.deaths, kills:player.kills, weaponIdx:player.weaponIdx, buildIdx:player.buildIdx, reloading:player.reloading,
+             shield:player.shield, channelProgress:player.channelProgress,
+             channelType: player.usingItem? player.usingItem.type : null, name:player.name,
+             tier: rankTierFor(profile.ranked.points).id});
+}
+
+// Host-only: broadcast every bot's state exactly like a human peer would broadcast its
+// own, so friends can mirror bots (position, hp, animation) without ever running bot AI
+// themselves. Staggered from sendMyStateIfDue's cadence to spread bandwidth across
+// however many bots this match has.
+function sendBotStatesIfDue(){
+  if(!(mode==='online' && onlineRankedMode && onlineIsHost())) return;
+  if(time-lastBotStateSendTime < 90) return;
+  lastBotStateSendTime = time;
+  activeFighters.forEach(f=>{
+    if(!f.isBot) return;
+    const netId = remoteFighters.indexOf(f);
+    if(netId<0) return;
+    sendGameAs(netId, {k:'s', x:f.x, y:f.y, angle:f.angle, hp:f.hp, alive:f.alive,
+               deaths:f.deaths, kills:f.kills, weaponIdx:f.weaponIdx, buildIdx:f.buildIdx, reloading:f.reloading,
+               shield:f.shield, channelProgress:f.channelProgress,
+               channelType: f.usingItem? f.usingItem.type : null, name:f.name});
+  });
+}
+
+// ============================== UPDATE ==============================
+function updatePlayer(dt){
+  if(!player.alive) return;
+  const dx = mouse.x - innerWidth/2, dy = mouse.y-innerHeight/2;
+  player.angle = Math.atan2(dy,dx);
+
+  updateConsumableChannel(player, mouse.down && player.consumableIdx>=0);
+
+  if(!player.usingItem){
+    let mx=0,my=0;
+    if(keys['w']) my-=1; if(keys['s']) my+=1;
+    if(keys['a']) mx-=1; if(keys['d']) mx+=1;
+    const len = Math.hypot(mx,my)||1;
+    const sprint = keys['shift']?1.4:1;
+    const spd = player.speed*sprint*dt;
+    const [nx,ny] = resolveMovement(player, player.x+(mx/len)*spd, player.y+(my/len)*spd);
+    player.x=nx; player.y=ny;
+  }
+
+  finishReloadIfDue(player);
+
+  if(player.consumableIdx>=0){
+    // holding the action button is handled by updateConsumableChannel above;
+    // no firing/building/reloading while a consumable is selected.
+  } else if(mouse.rdown){ pickAt(player); }
+  else if(mouse.down){
+    if(player.buildIdx>=0){ placeBuild(player); }
+    else if(canFire(player)){ fireWeapon(player); }
+    else if(currentWeapon(player).clip===0 || player.clip[player.weaponIdx]<=0){ tryReload(player); }
+  }
+
+  if(mode!=='practice' && player.hp<player.maxHp && time-player.lastHitTime>4000){
+    player.hp = Math.min(player.maxHp, player.hp+14*dt);
+  }
+  if(mode==='practice' && player.hp<player.maxHp){ player.hp = player.maxHp; }
+}
+
+function updateBullets(dt){
+  const sub = 4;
+  for(let i=bullets.length-1;i>=0;i--){
+    const b = bullets[i];
+    b.life -= dt*1000;
+    let dead = b.life<=0;
+    for(let s=0;s<sub && !dead;s++){
+      b.x += b.vx*dt/sub; b.y += b.vy*dt/sub;
+      if(b.x<0||b.y<0||b.x>=WORLD_W||b.y>=WORLD_H){ dead=true; break; }
+      const [cx,cy] = worldToCell(b.x,b.y);
+      const p = solidAt(cx,cy);
+      if(p){
+        const inset = p.half? CELL*0.28:0;
+        if(b.x>=cx*CELL+inset && b.x<=cx*CELL+CELL-inset && b.y>=cy*CELL+inset && b.y<=cy*CELL+CELL-inset){
+          damagePiece(p, b.dmg*1.6, b.x,b.y); dead=true; break;
+        }
+      }
+      for(const f of activeFighters){
+        if(!f.alive || f===b.owner || f.team===b.owner.team) continue;
+        const ddx=b.x-f.x, ddy=b.y-f.y;
+        if(ddx*ddx+ddy*ddy <= PLAYER_R*PLAYER_R){
+          damageFighter(f,b.dmg,b.x,b.y,b.owner); b.owner.shotsHit++;
+          dead=true; break;
+        }
+      }
+    }
+    b.trail.push({x:b.x,y:b.y}); if(b.trail.length>4) b.trail.shift();
+    if(dead) bullets.splice(i,1);
+  }
+}
+
+function updateParticles(dt){
+  for(let i=particles.length-1;i>=0;i--){
+    const p = particles[i];
+    p.life -= dt*1000;
+    p.x += (p.vx||0)*dt; p.y += (p.vy||0)*dt;
+    if(p.vx!==undefined){ p.vx*=0.9; p.vy*=0.9; }
+    if(p.life<=0) particles.splice(i,1);
+  }
+  for(let i=beams.length-1;i>=0;i--){ beams[i].t+=dt*1000; if(beams[i].t>140) beams.splice(i,1); }
+  for(let i=floatTexts.length-1;i>=0;i--){ floatTexts[i].t+=dt; floatTexts[i].y-=dt*28; if(floatTexts[i].t>0.9) floatTexts.splice(i,1); }
+}
+
+function updateRespawns(){
+  for(let i=respawnTimers.length-1;i>=0;i--){
+    if(time>=respawnTimers[i].at){
+      const f = respawnTimers[i].f;
+      const pos = {x:f.spawnPos.x, y:f.spawnPos.y+((Math.random()-0.5)*220)};
+      spawnFighter(f,pos,f.spawnPos.angle,{respawn:true});
+      respawnTimers.splice(i,1);
+    }
+  }
+}
+
+function matsRegen(dt){
+  activeFighters.forEach(f=>{
+    if(f.mats<f.maxMats && f.mats<9000) f.mats = Math.min(f.maxMats, f.mats+9*dt);
+  });
+}
+
+// ============================== RENDER ==============================
+function draw(){
+  ctx.save();
+  ctx.scale(DPR,DPR);
+  ctx.fillStyle = '#0b0e14';
+  ctx.fillRect(0,0,innerWidth,innerHeight);
+
+  camX = clamp(player.x-innerWidth/2, 0, WORLD_W-innerWidth);
+  camY = clamp(player.y-innerHeight/2, 0, WORLD_H-innerHeight);
+  ctx.translate(-camX,-camY);
+
+  drawGround();
+  drawSolids();
+  drawPickups();
+  drawParticlesBelow();
+  activeFighters.forEach(f=>{ if(f!==player) drawFighter(f); });
+  drawFighter(player);
+  drawBullets();
+  drawBeams();
+  drawFloatTexts();
+
+  ctx.restore();
+}
+
+function clamp(v,a,b){ return Math.max(a,Math.min(b,v)); }
+
+function drawGround(){
+  if(terrainCanvas){
+    const vx0 = Math.max(0, Math.min(WORLD_W, camX)), vy0 = Math.max(0, Math.min(WORLD_H, camY));
+    const vw = Math.max(0, Math.min(innerWidth, WORLD_W-vx0)), vh = Math.max(0, Math.min(innerHeight, WORLD_H-vy0));
+    if(vw>0 && vh>0) ctx.drawImage(terrainCanvas, vx0,vy0,vw,vh, vx0,vy0,vw,vh);
+  } else {
+    ctx.fillStyle = '#0e1320';
+    ctx.fillRect(0,0,WORLD_W,WORLD_H);
+  }
+  ctx.strokeStyle = 'rgba(255,255,255,0.035)';
+  ctx.lineWidth=1;
+  const x0 = Math.floor(camX/CELL)*CELL, x1 = camX+innerWidth+CELL;
+  const y0 = Math.floor(camY/CELL)*CELL, y1 = camY+innerHeight+CELL;
+  ctx.beginPath();
+  for(let x=x0;x<x1;x+=CELL){ ctx.moveTo(x,y0); ctx.lineTo(x,y1); }
+  for(let y=y0;y<y1;y+=CELL){ ctx.moveTo(x0,y); ctx.lineTo(x1,y); }
+  ctx.stroke();
+  ctx.strokeStyle = 'rgba(255,106,61,0.5)'; ctx.lineWidth=4;
+  ctx.strokeRect(2,2,WORLD_W-4,WORLD_H-4);
+}
+
+function drawSolids(){
+  solids.forEach(p=>{
+    const inset = p.half? CELL*0.28:0;
+    const x=p.cx*CELL+inset, y=p.cy*CELL+inset, s=CELL-inset*2;
+    ctx.fillStyle = shade(p.hex, 1);
+    roundRect(x+2,y+2,s-4,s-4,4);
+    ctx.fill();
+    ctx.strokeStyle='rgba(0,0,0,0.35)'; ctx.lineWidth=1.5; ctx.stroke();
+    if(p.hp<p.maxHp){
+      const ratio = Math.max(0,p.hp/p.maxHp);
+      ctx.fillStyle='rgba(0,0,0,0.45)'; ctx.fillRect(x+3,y+2,s-6,3);
+      ctx.fillStyle = ratio>0.5? '#8ee6b0': ratio>0.25? '#ffcf5c':'#ff5c74';
+      ctx.fillRect(x+3,y+2,(s-6)*ratio,3);
+    }
+  });
+}
+function drawPickups(){
+  const bob = Math.sin(time/300)*3;
+  pickups.forEach(pk=>{
+    if(!pk.active) return;
+    ctx.save();
+    ctx.translate(pk.x, pk.y+bob);
+    ctx.beginPath(); ctx.arc(0,10-bob,14,0,Math.PI*2);
+    ctx.fillStyle='rgba(0,0,0,0.3)'; ctx.fill();
+    ctx.beginPath(); ctx.arc(0,0,17,0,Math.PI*2);
+    ctx.fillStyle='rgba(19,24,36,0.85)'; ctx.fill();
+    ctx.strokeStyle = pk.type==='shield'? '#39c7ff':'#6bffa0'; ctx.lineWidth=1.5; ctx.stroke();
+    if(pk.type==='shield') drawShieldIcon(0,0,18,'#39c7ff'); else drawMedkitIcon(0,0,18,'#6bffa0');
+    ctx.restore();
+  });
+}
+function drawShieldIcon(cx,cy,s,color){
+  ctx.save(); ctx.translate(cx,cy);
+  ctx.strokeStyle=color; ctx.lineWidth=Math.max(1.4,s*0.09); ctx.lineJoin='round';
+  ctx.beginPath();
+  ctx.moveTo(0,-s*0.5);
+  ctx.lineTo(s*0.4,-s*0.3);
+  ctx.lineTo(s*0.4,s*0.05);
+  ctx.quadraticCurveTo(s*0.4,s*0.45,0,s*0.55);
+  ctx.quadraticCurveTo(-s*0.4,s*0.45,-s*0.4,s*0.05);
+  ctx.lineTo(-s*0.4,-s*0.3);
+  ctx.closePath();
+  ctx.stroke();
+  ctx.beginPath();
+  ctx.moveTo(-s*0.18,0); ctx.lineTo(-s*0.03,s*0.18); ctx.lineTo(s*0.22,-s*0.15);
+  ctx.stroke();
+  ctx.restore();
+}
+function drawMedkitIcon(cx,cy,s,color){
+  ctx.save(); ctx.translate(cx,cy);
+  ctx.strokeStyle=color; ctx.lineWidth=Math.max(1.4,s*0.09); ctx.lineJoin='round';
+  roundRect(-s*0.42,-s*0.32,s*0.84,s*0.64,s*0.1);
+  ctx.stroke();
+  ctx.beginPath();
+  ctx.moveTo(0,-s*0.18); ctx.lineTo(0,s*0.18);
+  ctx.moveTo(-s*0.18,0); ctx.lineTo(s*0.18,0);
+  ctx.stroke();
+  ctx.restore();
+}
+// Cosmetic hats are purely visual: drawn upright (never rotated with aim angle),
+// centered at (cx,cy) = top of the head. Adding a new hat = one more case here
+// plus an entry in HATS — no other rendering code needs to change.
+function drawHat(shape, color, cx, cy, r){
+  if(shape==='none') return;
+  ctx.save();
+  ctx.translate(cx,cy);
+  ctx.fillStyle = color; ctx.strokeStyle = 'rgba(0,0,0,0.35)'; ctx.lineWidth = 1.2;
+  if(shape==='cap'){
+    ctx.beginPath(); ctx.arc(0,0,r*0.62,Math.PI,0); ctx.fill(); ctx.stroke();
+    ctx.beginPath(); roundRect(0,-r*0.06,r*0.55,r*0.16,r*0.06); ctx.fill(); ctx.stroke();
+  } else if(shape==='beanie'){
+    ctx.beginPath(); ctx.arc(0,r*0.05,r*0.64,Math.PI,0); ctx.fill(); ctx.stroke();
+    ctx.beginPath(); ctx.arc(0,-r*0.55,r*0.13,0,Math.PI*2); ctx.fillStyle='#fff'; ctx.fill(); ctx.stroke();
+  } else if(shape==='helmet'){
+    ctx.fillStyle = color;
+    ctx.beginPath(); ctx.arc(0,r*0.1,r*0.68,Math.PI,0); ctx.fill(); ctx.stroke();
+    ctx.strokeStyle='rgba(0,0,0,0.5)'; ctx.beginPath(); ctx.moveTo(-r*0.68,r*0.1); ctx.lineTo(r*0.68,r*0.1); ctx.stroke();
+  } else if(shape==='cowboy'){
+    ctx.beginPath(); ctx.ellipse(0,r*0.12,r*0.95,r*0.28,0,0,Math.PI*2); ctx.fill(); ctx.stroke();
+    ctx.beginPath(); roundRect(-r*0.38,-r*0.55,r*0.76,r*0.6,r*0.3); ctx.fill(); ctx.stroke();
+  } else if(shape==='sombrero'){
+    ctx.beginPath(); ctx.ellipse(0,r*0.18,r*1.25,r*0.32,0,0,Math.PI*2); ctx.fill(); ctx.stroke();
+    ctx.beginPath(); ctx.ellipse(0,-r*0.15,r*0.4,r*0.42,0,0,Math.PI*2); ctx.fill(); ctx.stroke();
+    ctx.strokeStyle='rgba(255,255,255,0.6)'; ctx.beginPath(); ctx.ellipse(0,r*0.18,r*0.95,r*0.24,0,0,Math.PI*2); ctx.stroke();
+  } else if(shape==='horns'){
+    [-1,1].forEach(sgn=>{
+      ctx.beginPath();
+      ctx.moveTo(sgn*r*0.28,-r*0.15);
+      ctx.quadraticCurveTo(sgn*r*0.65,-r*0.55,sgn*r*0.42,-r*0.85);
+      ctx.quadraticCurveTo(sgn*r*0.5,-r*0.5,sgn*r*0.18,-r*0.2);
+      ctx.closePath(); ctx.fill(); ctx.stroke();
+    });
+  } else if(shape==='crown'){
+    ctx.beginPath();
+    ctx.moveTo(-r*0.55,r*0.05);
+    ctx.lineTo(-r*0.55,-r*0.25); ctx.lineTo(-r*0.3,-r*0.02);
+    ctx.lineTo(0,-r*0.5); ctx.lineTo(r*0.3,-r*0.02);
+    ctx.lineTo(r*0.55,-r*0.25); ctx.lineTo(r*0.55,r*0.05);
+    ctx.closePath(); ctx.fill(); ctx.stroke();
+    ctx.fillStyle='#fff';
+    [-0.3,0,0.3].forEach(dx=>{ ctx.beginPath(); ctx.arc(r*dx,-r*0.28,r*0.05,0,Math.PI*2); ctx.fill(); });
+  } else if(shape==='halo'){
+    ctx.strokeStyle=color; ctx.lineWidth=r*0.1;
+    ctx.beginPath(); ctx.ellipse(0,-r*0.55,r*0.42,r*0.14,0,0,Math.PI*2); ctx.stroke();
+  }
+  ctx.restore();
+}
+function hatSwatchSvg(shape,color){
+  // small DOM preview reusing the same silhouette language as drawHat, as inline SVG for menu cards
+  const c = color;
+  const shapes = {
+    none: '',
+    cap: `<path d="M4 18a12 12 0 0 1 24 0z" fill="${c}"/><rect x="16" y="16" width="13" height="4" rx="2" fill="${c}"/>`,
+    beanie: `<path d="M4 19a12 12 0 0 1 24 0z" fill="${c}"/><circle cx="16" cy="6" r="2.4" fill="#fff"/>`,
+    helmet: `<path d="M3 19a13 13 0 0 1 26 0z" fill="${c}"/><line x1="3" y1="19" x2="29" y2="19" stroke="rgba(0,0,0,.5)" stroke-width="1.5"/>`,
+    cowboy: `<ellipse cx="16" cy="20" rx="15" ry="4.4" fill="${c}"/><rect x="8" y="7" width="16" height="11" rx="6" fill="${c}"/>`,
+    sombrero: `<ellipse cx="16" cy="21" rx="16" ry="4.6" fill="${c}"/><ellipse cx="16" cy="13" rx="7" ry="7.2" fill="${c}"/>`,
+    horns: `<path d="M10 18c-1-4 1-9 4-11-2 4-1 7 1 9z" fill="${c}"/><path d="M22 18c1-4-1-9-4-11 2 4 1 7-1 9z" fill="${c}"/>`,
+    crown: `<path d="M4 19V11l6 5 6-10 6 10 6-5v8z" fill="${c}"/><circle cx="11" cy="8" r="1.6" fill="#fff"/><circle cx="16" cy="5" r="1.6" fill="#fff"/><circle cx="21" cy="8" r="1.6" fill="#fff"/>`,
+    halo: `<ellipse cx="16" cy="9" rx="8" ry="3" fill="none" stroke="${c}" stroke-width="2.4"/>`,
+  };
+  return `<svg viewBox="0 0 32 24" width="40" height="30">${shapes[shape]||''}</svg>`;
+}
+// Animated preview icon for the rank-halo menu cards — a small but genuinely-animated
+// hint of the real in-game effect (see drawRankHalo): spinning rings (via CSS keyframes
+// on <g> groups — a plain rotate does nothing to a symmetric ellipse, so dashed/offset
+// rings or an orbiting marker are what actually read as "spinning"), twinkling particles,
+// and glow, all driven by shared CSS classes (see the halo-* keyframes in <style>) so nothing
+// here needs a JS render loop. Colors come from HALO_COLORS (its own palette — see there),
+// not the swatch's rarity color, since the whole point is that each tier looks distinct.
+function haloSwatchSvg(shape,color){
+  if(shape==='none') return `<svg viewBox="0 0 32 24" width="56" height="40"></svg>`;
+  const c = HALO_COLORS[shape] || color;
+  const bodies = {
+    bronze: `
+      <g class="halo-ring-spin" style="transform-origin:16px 9px">
+        <ellipse cx="16" cy="9" rx="9" ry="3.3" fill="none" stroke="${c}" stroke-width="2.6"/>
+        <circle cx="25" cy="9" r="1.3" fill="#ffe0b0"/>
+      </g>
+      <circle class="halo-twinkle" cx="9" cy="6" r="0.8" fill="#ffe0b0" style="animation-delay:.3s"/>
+      <circle class="halo-twinkle" cx="21" cy="13" r="0.8" fill="#ffe0b0" style="animation-delay:1s"/>`,
+    silver: `
+      <ellipse class="halo-glow" cx="16" cy="9" rx="9.5" ry="3.5" fill="none" stroke="${c}" stroke-width="2.8"/>
+      <g class="halo-ring-spin-fast" style="transform-origin:16px 9px"><circle cx="25.5" cy="9" r="1.6" fill="#f2f6ff"/></g>
+      <circle class="halo-twinkle" cx="10" cy="6.5" r="0.9" fill="#eef3fa" style="animation-delay:.2s"/>
+      <circle class="halo-twinkle" cx="22" cy="12" r="0.9" fill="#eef3fa" style="animation-delay:.8s"/>
+      <circle class="halo-twinkle" cx="16" cy="5" r="0.7" fill="#eef3fa" style="animation-delay:1.3s"/>`,
+    gold: `
+      <ellipse class="halo-glow" cx="16" cy="9" rx="10" ry="3.6" fill="none" stroke="${c}" stroke-width="3.2"/>
+      <circle class="halo-fall" cx="10" cy="9" r="1" fill="#ffe08a" style="animation-delay:0s"/>
+      <circle class="halo-fall" cx="16" cy="9" r="1" fill="#ffe08a" style="animation-delay:.8s"/>
+      <circle class="halo-fall" cx="22" cy="9" r="1" fill="#ffe08a" style="animation-delay:1.6s"/>`,
+    platinum: `
+      <g class="halo-ring-spin" style="transform-origin:16px 9px"><ellipse cx="16" cy="9" rx="10.5" ry="3.8" fill="none" stroke="${c}" stroke-width="2.2" stroke-dasharray="4 3"/></g>
+      <g class="halo-ring-spin-rev" style="transform-origin:16px 9px"><ellipse cx="16" cy="9" rx="8" ry="2.9" fill="none" stroke="#bff2ff" stroke-width="1.6" stroke-dasharray="3 3"/></g>
+      <circle class="halo-twinkle" cx="9" cy="7" r="0.9" fill="#dffbff" style="animation-delay:.1s"/>
+      <circle class="halo-twinkle" cx="23" cy="11" r="0.9" fill="#dffbff" style="animation-delay:.7s"/>`,
+    diamond: `
+      <polygon class="halo-glow" points="16,5.4 19,7.3 19.4,9 19,10.7 16,12.6 13,10.7 12.6,9 13,7.3" fill="none" stroke="${c}" stroke-width="1.8"/>
+      <g class="halo-ring-spin-fast" style="transform-origin:16px 9px"><rect x="24.4" y="8" width="2" height="2" fill="#eaf7ff" transform="rotate(45 25.4 9)"/></g>
+      <path class="halo-twinkle" d="M9 6l.6 1.4L11 8l-1.4.6L9 10l-.6-1.4L7 8l1.4-.6z" fill="#ffffff" style="animation-delay:.2s"/>
+      <path class="halo-twinkle" d="M22 11l.5 1.1L23.6 12.6l-1.1.5L22 14.2l-.5-1.1L20.4 12.6l1.1-.5z" fill="#dff1ff" style="animation-delay:1s"/>`,
+    elite: `
+      <ellipse class="halo-glow" cx="16" cy="9" rx="7.5" ry="2.7" fill="none" stroke="${c}" stroke-width="1.8"/>
+      <ellipse class="halo-ring-spin" style="transform-origin:16px 9px" cx="16" cy="9" rx="9.5" ry="3.5" fill="none" stroke="${c}" stroke-width="1.3" opacity=".55"/>
+      <ellipse class="halo-ring-spin-rev" style="transform-origin:16px 9px" cx="16" cy="9" rx="11.5" ry="4.2" fill="none" stroke="${c}" stroke-width="1" opacity=".3"/>
+      <circle class="halo-twinkle" cx="9" cy="6" r="0.9" fill="#e4c9ff" style="animation-delay:.2s"/>
+      <circle class="halo-twinkle" cx="23" cy="12" r="0.9" fill="#e4c9ff" style="animation-delay:.9s"/>
+      <circle class="halo-twinkle" cx="16" cy="4.5" r="0.7" fill="#e4c9ff" style="animation-delay:1.4s"/>`,
+    champion: `
+      <ellipse class="halo-glow" cx="16" cy="9" rx="11.5" ry="4.1" fill="none" stroke="${c}" stroke-width="3"/>
+      <path d="M9 6.4l1.6 1 1.6-2 1.6 2 1.7-2.4 1.7 2.4 1.6-2 1.6 2 1.6-1" fill="none" stroke="${c}" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"/>
+      <circle class="halo-twinkle" cx="16" cy="4" r="1.1" fill="#fff6d8" style="animation-delay:.4s"/>
+      <circle class="halo-twinkle" cx="7" cy="10" r="0.9" fill="#ffe9b0" style="animation-delay:.1s"/>
+      <circle class="halo-twinkle" cx="25" cy="10" r="0.9" fill="#ffe9b0" style="animation-delay:.9s"/>`,
+    unreal: `
+      <ellipse cx="16" cy="9" rx="13" ry="5.5" fill="${c}" opacity=".12"/>
+      <g class="halo-ring-spin" style="transform-origin:16px 9px"><ellipse cx="16" cy="9" rx="11.5" ry="4.3" fill="none" stroke="#ffd7ec" stroke-width="1.3" stroke-dasharray="3 4"/></g>
+      <g class="halo-ring-spin-rev" style="transform-origin:16px 9px"><ellipse cx="16" cy="9" rx="8.5" ry="3.2" fill="none" stroke="#bfe8ff" stroke-width="1.1" stroke-dasharray="2 4"/></g>
+      <ellipse class="halo-glow" cx="16" cy="9" rx="10" ry="3.7" fill="none" stroke="${c}" stroke-width="2.6"/>
+      <ellipse cx="16" cy="9" rx="10" ry="3.7" fill="none" stroke="#ffffff" stroke-width="1" opacity=".8"/>
+      <circle class="halo-twinkle" cx="8" cy="6.5" r="1" fill="#ffc2e6" style="animation-delay:.1s"/>
+      <circle class="halo-twinkle" cx="24" cy="11.5" r="1" fill="#ffffff" style="animation-delay:.6s"/>
+      <circle class="halo-twinkle" cx="16" cy="4" r="0.9" fill="#ffffff" style="animation-delay:1.1s"/>
+      <ellipse class="halo-flash" cx="16" cy="9" rx="12" ry="5" fill="#ffffff" opacity="0"/>`,
+  };
+  return `<svg viewBox="0 0 32 24" width="56" height="40" style="overflow:visible">${bodies[shape]||''}</svg>`;
+}
+// Halo colors are their own palette, independent of RANK_TIERS.color (which drives the
+// rank tag/badge/leaderboard elsewhere) — the halo redesign calls for specific colors per
+// tier (e.g. Champion gold/orange, Unreal neon pink) that don't all match those badge tones.
+const HALO_COLORS = {
+  bronze:'#c9814a', silver:'#d7dee6', gold:'#ffd166', platinum:'#39d6ff',
+  diamond:'#7fc7ff', elite:'#a855f7', champion:'#ffb347', unreal:'#ff2fb0',
+};
+// ---- rank halo drawing primitives (shared by every tier below) ----
+function haloDot(px,py,size,color,alpha){
+  ctx.globalAlpha=alpha; ctx.beginPath(); ctx.arc(px,py,size,0,Math.PI*2); ctx.fillStyle=color; ctx.fill(); ctx.globalAlpha=1;
+}
+function haloStar(px,py,size,color,rot,alpha){
+  ctx.save(); ctx.translate(px,py); ctx.rotate(rot||0); ctx.globalAlpha=alpha!=null?alpha:1;
+  ctx.beginPath();
+  for(let i=0;i<8;i++){
+    const a=(i/8)*Math.PI*2, rr=i%2===0? size:size*0.4;
+    const px2=Math.cos(a)*rr, py2=Math.sin(a)*rr;
+    if(i===0) ctx.moveTo(px2,py2); else ctx.lineTo(px2,py2);
+  }
+  ctx.closePath(); ctx.fillStyle=color; ctx.fill();
+  ctx.restore(); ctx.globalAlpha=1;
+}
+function haloDiamondBit(px,py,size,color,rot,alpha){
+  ctx.save(); ctx.translate(px,py); ctx.rotate(rot); ctx.globalAlpha=alpha!=null?alpha:1;
+  ctx.beginPath(); ctx.moveTo(0,-size); ctx.lineTo(size*0.6,0); ctx.lineTo(0,size); ctx.lineTo(-size*0.6,0); ctx.closePath();
+  ctx.fillStyle=color; ctx.fill(); ctx.restore(); ctx.globalAlpha=1;
+}
+// A ring drawn as a dashed ellipse whose dash offset animates — the cheap, reliable way
+// to make a symmetric ellipse visibly "spin" (a plain rotate does nothing to a shape
+// that's rotationally symmetric, so the moving dashes are what sells the motion).
+function haloDashRing(rx,ry,color,width,dashLen,gapLen,offset,alpha,glow){
+  ctx.save();
+  ctx.globalAlpha=alpha!=null?alpha:1;
+  if(glow){ ctx.shadowColor=color; ctx.shadowBlur=glow; }
+  ctx.strokeStyle=color; ctx.lineWidth=width;
+  ctx.setLineDash([dashLen,gapLen]); ctx.lineDashOffset=offset;
+  ctx.beginPath(); ctx.ellipse(0,0,rx,ry,0,0,Math.PI*2); ctx.stroke();
+  ctx.setLineDash([]);
+  ctx.restore();
+}
+
+// The in-game/preview rank halo — floats clearly above the head and escalates in size,
+// ring count, particles and special effects from a plain Bronze band up to an animated,
+// aura-wreathed Unreal effect. Draws against the module-level `ctx` (or whatever
+// withCtx() has pointed it at) and animates off `time`, so it stays a single frozen frame
+// wherever it's used outside the main loop — fine for a menu preview, which only
+// re-renders when the player interacts with it.
+function drawRankHalo(tierId, x, y, r){
+  const tier = RANK_TIERS.find(t=>t.id===tierId);
+  if(!tier) return;
+  const color = HALO_COLORS[tierId] || tier.color;
+  const t = time/1000;
+  ctx.save();
+  // Floats well clear of the hp bar/name/rank tag stack above the head, with a slow bob.
+  ctx.translate(x, y-r*3.6-Math.sin(t*1.4)*1.5);
+  switch(tierId){
+    case 'bronze': {
+      // Solid metallic band with a soft rim light, a slow single bright glint orbiting,
+      // and a couple of very faint motes — the plainest halo in the game, on purpose.
+      const rx=r*1.05, ry=r*0.38;
+      ctx.strokeStyle=shade(color,0.65); ctx.lineWidth=4.2;
+      ctx.beginPath(); ctx.ellipse(0,0,rx,ry,0,0,Math.PI*2); ctx.stroke();
+      ctx.strokeStyle=color; ctx.lineWidth=2.4; ctx.shadowColor=color; ctx.shadowBlur=4;
+      ctx.beginPath(); ctx.ellipse(0,0,rx,ry,0,0,Math.PI*2); ctx.stroke();
+      ctx.shadowBlur=0;
+      const ga=t*0.6;
+      haloDot(Math.cos(ga)*rx, Math.sin(ga)*ry, 2, '#ffe0b0', 0.85);
+      haloDot(Math.cos(t*0.3+2)*rx*0.7, Math.sin(t*0.3+2)*ry*0.7-2, 1.1, '#ffe0b0', 0.25);
+      haloDot(Math.cos(t*0.25+4)*rx*0.7, Math.sin(t*0.25+4)*ry*0.7-3, 1.1, '#ffe0b0', 0.2);
+      break;
+    }
+    case 'silver': {
+      // Brighter metal, plus a bright reflection sweeping slowly around the band.
+      const rx=r*1.1, ry=r*0.4;
+      ctx.strokeStyle=color; ctx.lineWidth=2.8; ctx.shadowColor=color; ctx.shadowBlur=8;
+      ctx.beginPath(); ctx.ellipse(0,0,rx,ry,0,0,Math.PI*2); ctx.stroke();
+      ctx.shadowBlur=0;
+      const sweep=t*1.1;
+      for(let i=-2;i<=2;i++){
+        const a=sweep+i*0.12;
+        haloDot(Math.cos(a)*rx, Math.sin(a)*ry, 2-Math.abs(i)*0.4, '#f2f6ff', 0.9-Math.abs(i)*0.25);
+      }
+      for(let i=0;i<4;i++){
+        const a=t*0.5+i*(Math.PI/2);
+        haloDot(Math.cos(a)*rx*0.75, Math.sin(a)*ry*0.75-1, 1.2, '#e4ecf5', 0.5);
+      }
+      break;
+    }
+    case 'gold': {
+      // Strong warm glow, embers drifting gently downward off the ring and fading out.
+      const rx=r*1.15, ry=r*0.42;
+      const pulse = 0.9+Math.sin(t*2)*0.1;
+      ctx.strokeStyle=color; ctx.lineWidth=3.4; ctx.shadowColor=color; ctx.shadowBlur=14*pulse;
+      ctx.beginPath(); ctx.ellipse(0,0,rx*pulse,ry*pulse,0,0,Math.PI*2); ctx.stroke();
+      ctx.shadowBlur=0;
+      for(let i=0;i<6;i++){
+        const phase=((t*0.35)+i/6)%1;
+        const a=(i/6)*Math.PI*2+i;
+        const px=Math.cos(a)*rx*0.9, py0=Math.sin(a)*ry*0.9;
+        const py=py0+phase*14;
+        haloDot(px, py, 1.6-phase, '#ffe08a', (1-phase)*0.85);
+      }
+      break;
+    }
+    case 'platinum': {
+      // Two fine rings spinning opposite ways (sold via counter-animated dashes), a
+      // faint electric-field ring, and a scatter of blue sparks.
+      const rx1=r*1.15, ry1=r*0.42, rx2=r*0.92, ry2=r*0.34;
+      haloDashRing(rx1,ry1,color,2.4,10,9,-t*46,0.95,10);
+      haloDashRing(rx2,ry2,'#bff2ff',1.8,7,7,t*60,0.85,6);
+      ctx.globalAlpha=0.25; ctx.strokeStyle=color; ctx.lineWidth=1;
+      ctx.beginPath(); ctx.ellipse(0,0,rx1*1.12,ry1*1.12,0,0,Math.PI*2); ctx.stroke();
+      ctx.globalAlpha=1;
+      for(let i=0;i<5;i++){
+        const a=t*1.3+i*(Math.PI*2/5);
+        haloDot(Math.cos(a)*rx1*0.95, Math.sin(a)*ry1*0.95, 1.6, '#dffbff', 0.8);
+      }
+      // thin energy tendrils reaching down toward the head
+      ctx.globalAlpha=0.35+Math.sin(t*5)*0.15; ctx.strokeStyle=color; ctx.lineWidth=1.2;
+      ctx.beginPath(); ctx.moveTo(-rx1*0.4,ry1*0.6); ctx.lineTo(-rx1*0.25,ry1*2.6);
+      ctx.moveTo(rx1*0.4,ry1*0.6); ctx.lineTo(rx1*0.25,ry1*2.6);
+      ctx.stroke(); ctx.globalAlpha=1;
+      break;
+    }
+    case 'diamond': {
+      // Faceted crystal ring, pulsing brightness, orbiting cut-diamond fragments and a
+      // couple of twinkling star-bursts.
+      const rx=r*1.2, ry=r*0.44;
+      const pulse = 0.88+Math.sin(t*3)*0.12;
+      ctx.strokeStyle=color; ctx.lineWidth=2.6; ctx.shadowColor=color; ctx.shadowBlur=16*pulse;
+      const facets=12;
+      ctx.beginPath();
+      for(let i=0;i<=facets;i++){
+        const a=(i/facets)*Math.PI*2, rr=(i%2===0? rx:rx*0.82);
+        const px=Math.cos(a)*rr, py=Math.sin(a)*rr/rx*ry;
+        if(i===0) ctx.moveTo(px,py); else ctx.lineTo(px,py);
+      }
+      ctx.closePath(); ctx.stroke();
+      ctx.shadowBlur=0;
+      for(let i=0;i<3;i++){
+        const a=t*1.6+i*(Math.PI*2/3);
+        haloDiamondBit(Math.cos(a)*rx*1.15, Math.sin(a)*ry*1.15, 3.2, '#eaf7ff', a*2, 0.9);
+      }
+      const twinkle1 = 0.5+Math.max(0,Math.sin(t*2.2))*0.5, twinkle2 = 0.5+Math.max(0,Math.sin(t*2.2+Math.PI))*0.5;
+      haloStar(-rx*0.5,-ry*0.3,3.6,'#ffffff',t*0.6,twinkle1);
+      haloStar(rx*0.55,-ry*0.1,3,'#dff1ff',-t*0.6,twinkle2);
+      break;
+    }
+    case 'elite': {
+      // Three layered, independently floating purple rings, an expanding energy wave,
+      // and a denser field of violet particles — meant to read as clearly rarer than Diamond.
+      const pulse = 0.9+Math.sin(t*3.2)*0.1;
+      [{s:1.0,o:1,ph:0},{s:1.22,o:0.55,ph:1.3},{s:1.42,o:0.32,ph:2.6}].forEach((ring,i)=>{
+        const bob = Math.sin(t*1.6+ring.ph)*1.5;
+        ctx.globalAlpha=ring.o; ctx.strokeStyle=color; ctx.lineWidth=2.2-i*0.4;
+        ctx.shadowColor=color; ctx.shadowBlur=14*pulse*ring.o;
+        ctx.beginPath(); ctx.ellipse(0,bob,r*1.1*ring.s*pulse, r*0.4*ring.s*pulse, 0,0,Math.PI*2); ctx.stroke();
+      });
+      ctx.globalAlpha=1; ctx.shadowBlur=0;
+      const wave = (t*0.6)%1;
+      ctx.globalAlpha = (1-wave)*0.5; ctx.strokeStyle=color; ctx.lineWidth=1.4;
+      ctx.beginPath(); ctx.ellipse(0,0, r*(1.1+wave*0.9), r*(0.4+wave*0.35), 0,0,Math.PI*2); ctx.stroke();
+      ctx.globalAlpha=1;
+      for(let i=0;i<7;i++){
+        const a=t*1.1+i*(Math.PI*2/7);
+        haloDot(Math.cos(a)*r*1.05, Math.sin(a)*r*0.4, 1.7, '#e4c9ff', 0.75);
+      }
+      break;
+    }
+    case 'champion': {
+      // A big, warm ring topped with small crown spikes, a slow inner glow sweep, and a
+      // wide but restrained gold particle field — strong yet "elegant", not busy.
+      const rx=r*1.35, ry=r*0.48;
+      ctx.strokeStyle=color; ctx.lineWidth=3.6; ctx.shadowColor=color; ctx.shadowBlur=20;
+      ctx.beginPath(); ctx.ellipse(0,0,rx,ry,0,0,Math.PI*2); ctx.stroke();
+      ctx.lineWidth=1.4; ctx.globalAlpha=0.45; ctx.shadowBlur=0;
+      ctx.beginPath(); ctx.ellipse(0,0,rx*1.14,ry*1.14,0,0,Math.PI*2); ctx.stroke();
+      ctx.globalAlpha=1;
+      // crown spikes along the top arc
+      const spikes=5;
+      for(let i=0;i<spikes;i++){
+        const a=Math.PI*(1.18+ (i/(spikes-1))*0.64);
+        const bx=Math.cos(a)*rx, by=Math.sin(a)*ry;
+        const nx=Math.cos(a), ny=Math.sin(a)/ry*rx;
+        const norm=Math.hypot(nx,ny)||1;
+        const spikeLen = 6+ (i===Math.floor(spikes/2)?2:0);
+        ctx.beginPath();
+        ctx.moveTo(bx-nx/norm*3, by-ny/norm*1.2);
+        ctx.lineTo(bx+(nx/norm)*spikeLen*-1, by+(ny/norm)*spikeLen*-1);
+        ctx.lineTo(bx+nx/norm*3, by+ny/norm*1.2);
+        ctx.closePath();
+        ctx.fillStyle= i===Math.floor(spikes/2)? '#fff6d8':color;
+        ctx.fill();
+      }
+      const sweepA=t*1.2;
+      ctx.save(); ctx.globalAlpha=0.55; ctx.strokeStyle='#fff2c2'; ctx.lineWidth=3;
+      ctx.beginPath(); ctx.ellipse(0,0,rx,ry,0,sweepA,sweepA+0.7); ctx.stroke();
+      ctx.restore();
+      for(let i=0;i<5;i++){
+        const a=-t*0.8+i*(Math.PI*2/5);
+        haloDot(Math.cos(a)*rx*0.92, Math.sin(a)*ry*0.92, 1.8, '#ffe9b0', 0.8);
+      }
+      break;
+    }
+    case 'unreal': {
+      // The showcase halo: a soft aura, a bright neon-pink main ring, two orbiting
+      // fragment rings, a dense pink/white particle field, radiating energy pulses, and
+      // an occasional bright flash — clearly the most exclusive effect in the game.
+      const rx=r*1.4, ry=r*0.5;
+      // aura
+      const auraPulse = 0.85+Math.sin(t*1.1)*0.15;
+      ctx.globalAlpha=0.14*auraPulse; ctx.fillStyle='#ff5ca3';
+      ctx.beginPath(); ctx.ellipse(0,0,rx*1.9,ry*3.2,0,0,Math.PI*2); ctx.fill();
+      ctx.globalAlpha=1;
+      // orbiting fragment rings
+      haloDashRing(rx*1.2,ry*1.2,'#ffd7ec',1.6,5,10,t*70,0.6,8);
+      haloDashRing(rx*0.85,ry*0.85,'#bfe8ff',1.4,4,9,-t*90,0.55,6);
+      // main ring
+      ctx.strokeStyle='#ff5ca3'; ctx.lineWidth=3.6; ctx.shadowColor='#ff5ca3'; ctx.shadowBlur=24;
+      ctx.beginPath(); ctx.ellipse(0,0,rx,ry,0,0,Math.PI*2); ctx.stroke();
+      ctx.strokeStyle='rgba(255,255,255,0.85)'; ctx.lineWidth=1.4; ctx.shadowBlur=10;
+      ctx.beginPath(); ctx.ellipse(0,0,rx,ry,0,0,Math.PI*2); ctx.stroke();
+      ctx.shadowBlur=0;
+      // radiating pulses
+      for(let i=0;i<4;i++){
+        const a=t*0.9+i*(Math.PI/2);
+        const pulse=(t*0.8+i*0.25)%1;
+        ctx.globalAlpha=(1-pulse)*0.6; ctx.strokeStyle='#ffe3f3'; ctx.lineWidth=1.2;
+        ctx.beginPath();
+        ctx.moveTo(Math.cos(a)*rx*0.8, Math.sin(a)*ry*0.8);
+        ctx.lineTo(Math.cos(a)*rx*(1+pulse*0.8), Math.sin(a)*ry*(1+pulse*0.8));
+        ctx.stroke();
+      }
+      ctx.globalAlpha=1;
+      // particle field — pink and white mixed
+      for(let i=0;i<9;i++){
+        const a=t*1.4+i*(Math.PI*2/9);
+        const col=i%2===0? '#ffc2e6':'#ffffff';
+        haloDot(Math.cos(a)*rx*0.95, Math.sin(a)*ry*0.95, 1.8, col, 0.55+Math.sin(t*3+i)*0.35);
+      }
+      // occasional special flash
+      const cycle=t%4.2;
+      if(cycle<0.35){
+        const flash=1-cycle/0.35;
+        ctx.globalAlpha=flash*0.85; ctx.fillStyle='#ffffff'; ctx.shadowColor='#fff'; ctx.shadowBlur=30*flash;
+        ctx.beginPath(); ctx.ellipse(0,0,rx*1.3*flash+rx*0.2,ry*1.3*flash+ry*0.2,0,0,Math.PI*2); ctx.fill();
+        ctx.globalAlpha=1; ctx.shadowBlur=0;
+      }
+      break;
+    }
+  }
+  ctx.restore();
+}
+function shade(hex,f){
+  const c = hexToRgb(hex);
+  return `rgb(${Math.min(255,c.r*f)|0},${Math.min(255,c.g*f)|0},${Math.min(255,c.b*f)|0})`;
+}
+function hexToRgb(h){ const n=parseInt(h.slice(1),16); return {r:(n>>16)&255,g:(n>>8)&255,b:n&255}; }
+function roundRect(x,y,w,h,r){
+  ctx.beginPath();
+  ctx.moveTo(x+r,y);
+  ctx.arcTo(x+w,y,x+w,y+h,r);
+  ctx.arcTo(x+w,y+h,x,y+h,r);
+  ctx.arcTo(x,y+h,x,y,r);
+  ctx.arcTo(x,y,x+w,y,r);
+  ctx.closePath();
+}
+
+function drawFighter(f){
+  if(!f.alive) return;
+  const isP = f===player;
+  const bodyColor = f.color || (isP? '#ff8a5c' : (f.team===player.team? '#5ce0ff':'#ff5c74'));
+  ctx.save();
+  ctx.translate(f.x,f.y);
+  ctx.beginPath(); ctx.ellipse(0,PLAYER_R*0.7,PLAYER_R*0.9,PLAYER_R*0.4,0,0,Math.PI*2);
+  ctx.fillStyle='rgba(0,0,0,0.35)'; ctx.fill();
+  ctx.rotate(f.angle);
+  ctx.beginPath(); ctx.arc(0,0,PLAYER_R,0,Math.PI*2);
+  ctx.fillStyle = bodyColor;
+  ctx.fill();
+  ctx.strokeStyle = 'rgba(255,255,255,0.55)'; ctx.lineWidth=2; ctx.stroke();
+  ctx.fillStyle = '#1a1e28';
+  ctx.fillRect(PLAYER_R-4, -4, 20, 8);
+  ctx.restore();
+
+  if(f.hat && f.hat!=='hat_none'){
+    const hatDef = cosmeticById(f.hat);
+    if(hatDef) drawHat(hatDef.shape, bodyColor==='#2a2f3a'?'#5a6070':bodyColor, f.x, f.y-PLAYER_R*0.75, PLAYER_R);
+  }
+  // Rank halo floats well above the hat so the two cosmetic slots never overlap.
+  if(f.halo && f.halo!=='halo_none'){
+    const haloDef = cosmeticById(f.halo);
+    if(haloDef) drawRankHalo(haloDef.shape, f.x, f.y, PLAYER_R);
+  }
+
+  ctx.save();
+  ctx.translate(f.x, f.y-PLAYER_R-16);
+  const w=44,h=6;
+  ctx.fillStyle='rgba(0,0,0,0.5)'; roundRect(-w/2-1,-1,w+2,h+2,3); ctx.fill();
+  const ratio = f.hp/f.maxHp;
+  ctx.fillStyle = ratio>0.5?'#8ee6b0':ratio>0.25?'#ffcf5c':'#ff5c74';
+  roundRect(-w/2,0,w*ratio,h,2); ctx.fill();
+  if(f.shield>0){
+    const sRatio = f.shield/f.maxShield;
+    ctx.fillStyle='rgba(0,0,0,0.5)'; roundRect(-w/2-1,h,w+2,4,2); ctx.fill();
+    ctx.fillStyle='#39c7ff'; roundRect(-w/2,h+1,w*sRatio,2,1); ctx.fill();
+  }
+  ctx.textAlign='center';
+  // Rank tag: the fighter's own current rank, right above their name — always live
+  // (recomputed from points every frame, so a rank-up/down mid-match updates instantly).
+  // Only shown for the local player and for real remote humans in online whose rank we
+  // actually know (synced via the periodic 's' broadcast) — bots have no rank to show.
+  const tagTierId = isP? rankTierFor(profile.ranked.points).id : (f.isOnlineRemote? f.rankTierId : null);
+  if(tagTierId){
+    const rt = RANK_TIERS.find(t=>t.id===tagTierId);
+    if(rt){
+      ctx.fillStyle = rt.color; ctx.font = "700 9px Rajdhani, sans-serif";
+      ctx.fillText(rt.name.toUpperCase(), 0, -18);
+    }
+  }
+  ctx.fillStyle='#cfd6e4'; ctx.font="600 11px Rajdhani, sans-serif";
+  const sameTeam = f.team===player.team;
+  let label;
+  if(isP) label = 'TÚ';
+  else if(f.isOnlineRemote && f.name) label = f.name;
+  else label = sameTeam? 'ALIADO' : (mode==='online'? 'RIVAL':'BOT');
+  ctx.fillText(label, 0, -6);
+  ctx.restore();
+
+  if(f.channelProgress!=null){
+    ctx.save();
+    ctx.translate(f.x, f.y+PLAYER_R+14);
+    const cw=50,ch=6;
+    const chType = f.usingItem? f.usingItem.type : f.channelType;
+    ctx.fillStyle='rgba(0,0,0,0.55)'; roundRect(-cw/2-1,-1,cw+2,ch+2,3); ctx.fill();
+    ctx.fillStyle = chType==='medkit'? '#6bffa0' : '#39c7ff';
+    roundRect(-cw/2,0,cw*f.channelProgress,ch,2); ctx.fill();
+    ctx.restore();
+  }
+}
+
+function drawBullets(){
+  bullets.forEach(b=>{
+    ctx.save();
+    b.trail.forEach((t,i)=>{
+      ctx.globalAlpha = (i+1)/b.trail.length*0.5;
+      ctx.beginPath(); ctx.arc(t.x,t.y,2.5,0,Math.PI*2);
+      ctx.fillStyle=b.color; ctx.fill();
+    });
+    ctx.globalAlpha=1;
+    ctx.beginPath(); ctx.arc(b.x,b.y,3.2,0,Math.PI*2);
+    ctx.fillStyle='#fff'; ctx.fill();
+    ctx.restore();
+  });
+}
+function drawBeams(){
+  beams.forEach(bm=>{
+    const a = 1-bm.t/140;
+    ctx.save(); ctx.globalAlpha=Math.max(0,a);
+    ctx.strokeStyle=bm.color; ctx.lineWidth=3;
+    ctx.shadowColor=bm.color; ctx.shadowBlur=8;
+    ctx.beginPath(); ctx.moveTo(bm.x1,bm.y1); ctx.lineTo(bm.x2,bm.y2); ctx.stroke();
+    ctx.restore();
+  });
+}
+function drawParticlesBelow(){
+  particles.forEach(p=>{
+    const a = Math.max(0,p.life/p.maxLife);
+    ctx.save(); ctx.globalAlpha=a;
+    ctx.beginPath(); ctx.arc(p.x,p.y,p.size*(p.type==='flash'?a:1),0,Math.PI*2);
+    ctx.fillStyle=p.color; ctx.fill();
+    ctx.restore();
+  });
+}
+function drawFloatTexts(){
+  floatTexts.forEach(t=>{
+    ctx.save(); ctx.globalAlpha = Math.max(0,1-t.t/0.9);
+    ctx.font="700 13px Rajdhani, sans-serif"; ctx.fillStyle=t.color; ctx.textAlign='center';
+    ctx.fillText(t.txt, t.x, t.y);
+    ctx.restore();
+  });
+}
+
+// ============================== HUD ==============================
+const actionBar = document.getElementById('actionBar');
+function buildActionBar(){
+  actionBar.innerHTML='';
+  WEAPONS.forEach((w,i)=>{
+    const el = document.createElement('div');
+    el.className='slot weapon'; el.dataset.wi=i;
+    el.innerHTML = `<div class="k hud-font">${w.key}</div><div class="n">${w.name}</div><div class="sub"></div>`;
+    actionBar.appendChild(el);
+  });
+  const div = document.createElement('div'); div.className='divider'; actionBar.appendChild(div);
+  BUILDS.forEach((b,i)=>{
+    const el = document.createElement('div');
+    el.className='slot build'; el.dataset.bi=i;
+    el.innerHTML = `<div class="k hud-font" style="color:${b.hex}">${b.key.toUpperCase()}</div><div class="n">${b.name}</div><div class="sub"></div>`;
+    actionBar.appendChild(el);
+  });
+  const div2 = document.createElement('div'); div2.className='divider'; actionBar.appendChild(div2);
+  CONSUMABLES.forEach((c,i)=>{
+    const el = document.createElement('div');
+    el.className='slot consumable'; el.dataset.ci=i;
+    el.style.color = c.hex;
+    el.innerHTML = `${ICONS[c.id]}<div class="n">${c.name}</div><div class="sub"></div>`;
+    actionBar.appendChild(el);
+  });
+}
+buildActionBar();
+
+function updateHUDStatic(){
+  document.getElementById('scoreLine').textContent = mode==='practice'? 'PRÁCTICA LIBRE' : 'PRIMERO A '+killsToWinFor(mode);
+  document.getElementById('connStatus').textContent = mode==='online'? 'Conectado' : '';
+  document.getElementById('connStatus').className = mode==='online'? 'ok' : '';
+  const ranked = isAnyRankedMatch();
+  document.getElementById('topRight').classList.toggle('hidden', ranked);
+  document.getElementById('rankedHud').classList.toggle('hidden', !ranked);
+  const mapTag = document.getElementById('mapNameTag');
+  mapTag.classList.toggle('hidden', !MAP_NAMES[currentMapKey]);
+  mapTag.textContent = MAP_NAMES[currentMapKey]||'';
+}
+
+function updateHUD(){
+  document.getElementById('hpFill').style.width = Math.max(0,player.hp)+'%';
+  document.getElementById('hpNum').textContent = Math.max(0,Math.round(player.hp));
+  document.getElementById('shieldFill').style.width = (player.shield/player.maxShield*100)+'%';
+  document.getElementById('shieldNum').textContent = Math.round(player.shield);
+  document.getElementById('shieldRow').classList.toggle('empty', player.shield<=0);
+  document.getElementById('matsFill').style.width = Math.min(100,(player.mats/player.maxMats*100))+'%';
+  document.getElementById('matsNum').textContent = Math.round(Math.min(player.mats,player.maxMats));
+  if(isAnyRankedMatch() && rankedMatch){
+    document.getElementById('rkPoints').textContent = Math.round(profile.ranked.points);
+    document.getElementById('rkKills').textContent = player.kills;
+    document.getElementById('rkPlayersLeft').textContent = activeFighters.filter(f=>f.alive).length;
+    document.getElementById('rkTeamsLeft').textContent = teamsRemainingCount();
+    const gain = rankedMatch.pointsThisMatch;
+    document.getElementById('rankedMatchGain').textContent = (gain>=0?'+':'')+gain+' esta partida';
+  } else if(isTeamMode()){
+    document.getElementById('tagMe').textContent = 'TU EQUIPO '+teamKills(player.team);
+    const enemyTeam = activeFighters.map(f=>f.team).find(t=>t!==player.team);
+    document.getElementById('tagBot').textContent = 'RIVALES '+teamKills(enemyTeam);
+  } else {
+    document.getElementById('tagMe').textContent = 'TÚ '+player.kills;
+    document.getElementById('tagBot').textContent = (mode==='online'?'RIVAL ':'BOT ')+bot.kills;
+  }
+
+  const lowhp = document.getElementById('lowhp');
+  if(player.hp<30 && player.alive){
+    const inten = 1-(player.hp/30);
+    lowhp.style.boxShadow = `inset 0 0 ${120+inten*80}px ${10+inten*30}px rgba(255,59,92,${0.15+inten*0.35})`;
+  } else lowhp.style.boxShadow = 'none';
+
+  actionBar.querySelectorAll('.slot.weapon').forEach(el=>{
+    const i = +el.dataset.wi;
+    el.classList.toggle('active', player.buildIdx<0 && player.consumableIdx<0 && player.weaponIdx===i);
+    const sub = el.querySelector('.sub');
+    sub.textContent = player.reloading && player.weaponIdx===i ? '...' : (player.clip[i]+'/'+player.reserve[i]);
+    el.classList.toggle('empty', player.clip[i]===0 && !player.reloading);
+  });
+  actionBar.querySelectorAll('.slot.build').forEach(el=>{
+    const i = +el.dataset.bi;
+    el.classList.toggle('active', player.buildIdx===i);
+    el.querySelector('.sub').textContent = BUILDS[i].cost;
+    el.classList.toggle('empty', player.mats<BUILDS[i].cost);
+  });
+  actionBar.querySelectorAll('.slot.consumable').forEach(el=>{
+    const i = +el.dataset.ci;
+    const c = CONSUMABLES[i];
+    const count = player.inventory[c.id]||0;
+    el.classList.toggle('active', player.consumableIdx===i);
+    el.querySelector('.sub').textContent = count;
+    el.classList.toggle('empty', count<=0);
+  });
+}
+
+function showEndScreen(){
+  const endScreen = document.getElementById('endScreen');
+  const endPanel = document.getElementById('endPanel');
+  const won = winner==='player';
+  endPanel.classList.toggle('lose', !won);
+  document.getElementById('endEyebrow').textContent = won? 'HAS GANADO EL DUELO':'HAS PERDIDO EL DUELO';
+  document.getElementById('endTitle').textContent = won? 'VICTORIA':'DERROTA';
+  document.getElementById('statKills').textContent = player.kills;
+  document.getElementById('statDeaths').textContent = player.deaths;
+  const acc = player.shotsFired? Math.round(player.shotsHit/player.shotsFired*100):0;
+  document.getElementById('statShots').textContent = acc+'%';
+  endScreen.classList.remove('hidden');
+}
+
+function rankBadgeSvg(tier){
+  const c = tier.color;
+  return `<svg viewBox="0 0 32 32" width="100%" height="100%">
+    <path d="M16 2l11 4.5v8c0 8-5 13.6-11 15.5C10 28.1 5 22.5 5 14.5v-8z" fill="none" stroke="${c}" stroke-width="2" stroke-linejoin="round"/>
+    <path d="M16 2l11 4.5v8c0 8-5 13.6-11 15.5z" fill="${c}" opacity="0.28"/>
+  </svg>`;
+}
+
+function showRankedResultsScreen(){
+  const rm = rankedMatch;
+  if(!rm) return;
+  document.getElementById('rkPlacementTitle').textContent = '#'+rm.placement;
+  document.getElementById('rkResKills').textContent = player.kills;
+  document.getElementById('rkElimPts').textContent = '+'+rm.eliminationPoints;
+  document.getElementById('rkPlacePts').textContent = '+'+rm.placementPoints;
+  document.getElementById('rkEntryPts').textContent = '-'+rm.entryCost;
+  const total = rm.eliminationPoints + rm.placementPoints - rm.entryCost;
+  document.getElementById('rkTotalPts').textContent = (total>=0?'+':'')+total;
+  document.getElementById('rkEntryLine').classList.toggle('hidden', rm.entryCost<=0);
+
+  const badge = document.getElementById('rkBadge');
+  const fill = document.getElementById('rkProgressFill');
+  const label = document.getElementById('rkProgressLabel');
+  const tierName = document.getElementById('rkTierName');
+  const rankUpBanner = document.getElementById('rankUpBanner');
+  rankUpBanner.classList.add('hidden'); rankUpBanner.classList.remove('show');
+
+  const beforeProg = rankProgress(rm.beforePoints);
+  badge.innerHTML = rankBadgeSvg(rm.beforeTier);
+  tierName.textContent = rm.beforeTier.name;
+  tierName.style.color = rm.beforeTier.color;
+  fill.style.background = rm.beforeTier.color;
+  fill.style.width = '0%';
+  label.textContent = Math.round(rm.beforePoints)+' pts';
+
+  document.getElementById('rankedResultsScreen').classList.remove('hidden');
+
+  requestAnimationFrame(()=>{
+    fill.style.width = beforeProg.pct+'%';
+    if(rm.rankedUp){
+      setTimeout(()=>{
+        badge.innerHTML = rankBadgeSvg(rm.afterTier);
+        tierName.textContent = rm.afterTier.name;
+        tierName.style.color = rm.afterTier.color;
+        fill.style.background = rm.afterTier.color;
+        fill.style.width = '0%';
+        label.textContent = Math.round(rm.afterPoints)+' pts';
+        rankUpBanner.classList.remove('hidden');
+        document.getElementById('rankUpSub').textContent = rm.beforeTier.name.toUpperCase()+' → '+rm.afterTier.name.toUpperCase();
+        requestAnimationFrame(()=>{
+          rankUpBanner.classList.add('show');
+          const afterProg = rankProgress(rm.afterPoints);
+          fill.style.width = afterProg.pct+'%';
+        });
+      }, 1000);
+    } else {
+      const afterProg = rankProgress(rm.afterPoints);
+      setTimeout(()=>{
+        fill.style.width = afterProg.pct+'%';
+        label.textContent = Math.round(rm.afterPoints)+' pts';
+      }, 500);
+    }
+  });
+}
+
+// ============================== MAIN LOOP ==============================
+let lastT = performance.now();
+function loop(now){
+  requestAnimationFrame(loop);
+  let dt = (now-lastT)/1000; lastT = now;
+  dt = Math.min(dt, 0.033);
+  if(running && !paused){
+    time += dt*1000;
+    activeFighters.forEach(f=>{ if(f.isBot){ botThink(f,dt); botAct(f,dt); } });
+    updatePlayer(dt);
+    updateNetworkPeer(dt);
+    updateBullets(dt);
+    updateParticles(dt);
+    updateRespawns();
+    updatePickups();
+    matsRegen(dt);
+    sendMyStateIfDue();
+    sendBotStatesIfDue();
+  }
+  draw();
+  updateHUD();
+}
+requestAnimationFrame(loop);
+
+})();
+</script>
