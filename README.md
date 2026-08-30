@@ -73,6 +73,8 @@ En cualquier modo por equipos (2v2 local o 2v2 online), los bots/compañeros rec
 
 **Construcción**: solo existe el **Muro** (`Q`) — rampa, cono y suelo se quitaron porque en una cámara cenital no aportaban nada (no hay nada que escalar ni asomarse). El mapa se sortea entre 3 diseños distintos de cobertura (Clásico / Cruce / Islas) en cada partida.
 
+**Minimapa** (esquina superior derecha): versión reducida del terreno real de la partida (mismo arte que el mapa grande, solo escalado), con los obstáculos marcados, tu posición como una flecha que apunta hacia donde apuntas, y tus compañeros vivos como puntos — se actualiza en vivo. En Ranked también dibuja el círculo de la zona. Los rivales/bots **nunca** aparecen ahí a propósito, para no convertirlo en un radar gratis.
+
 **Mapa**: cada partida genera un terreno propio (no solo el diseño de cobertura) — zonas de tierra, arena y una laguna repartidas por el mapa, un par de caminos que las conectan, y árboles/arbustos/piedras decorativos esparcidos sobre el pasto. Todo eso es puramente visual (no bloquea disparos ni movimiento), para que el mapa se sienta vivo sin tocar el gameplay ya probado. Además de las cajas (crates) de siempre, cada partida coloca 2-3 pequeñas "casitas" (una estructura hueca de 3x3 con una entrada) como cobertura destructible extra — usan exactamente el mismo sistema de colisión/vida que las crates, solo con otra forma y color, así que son un punto de cobertura real, no decoración.
 
 ## Ranked Battle Royale
