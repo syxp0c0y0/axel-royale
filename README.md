@@ -1,6 +1,6 @@
 # Axel's Royale
 
-Duelo de construcción y disparos (estilo 1v1.lol/Fortnite) con progresión: monedas, tienda de cosméticos, perfil, desafíos diarios/semanales, y varios modos contra bots. Incluye multijugador online **real**: 1v1 o 2v2, y Ranked Dúos/Tríos junto a 1-2 amigos reales contra equipos de bots, con jugadores reales conectados desde casas distintas.
+Duelo de construcción y disparos (estilo 1v1.lol/Fortnite) con progresión: monedas, Pase de Batalla con XP, tienda de cosméticos, perfil, desafíos diarios/semanales, y varios modos contra bots (con un interruptor Ranked ON/OFF). Incluye multijugador online **real**: 1v1 o 2v2, y Ranked Dúos/Tríos junto a 1-2 amigos reales contra equipos de bots, con jugadores reales conectados desde casas distintas.
 
 ## Qué incluye
 
@@ -83,7 +83,8 @@ Menú principal rediseñado como un lobby real (interfaz original, no una copia 
 
 - **Barra superior fija**: LOBBY / LOCKER / ITEM SHOP / PROFILE, siempre visible en esas 4 secciones, con la sección activa resaltada. Ranked (amigos/leaderboard), Desafíos, y el modo clásico (1v1/2v2/Práctica) siguen accesibles como tarjetas secundarias desde el Lobby — no desaparecieron, solo dejaron de ocupar la pantalla principal permanentemente.
 - **Lobby**: tu personaje centrado, con el color/sombrero/halo que tengas equipados de verdad (se actualiza al instante si cambias algo en LOCKER, sin recargar), tu insignia de rango actual junto a tu nombre, y un fondo que se tiñe con el color de tu propio rango. Incluye una fila de "equipo" (tú + un espacio "+ Amigos · Próximamente" reservado para cuando exista ese sistema — no es un botón que finja funcionar, es espacio guardado a propósito).
-- **Selector de modo**: el botón "CAMBIAR MODO" abre una ventana con SOLO / DÚOS / TRÍOS — eliges una, confirmas, y vuelves al Lobby viendo el modo elegido (Cancelar no cambia nada). El botón **JUGAR** siempre inicia una partida Ranked en el modo actualmente seleccionado.
+- **Selector de modo**: el botón "CAMBIAR MODO" abre una ventana con tres secciones — **BATTLE ROYALE** (Solo/Dúos/Tríos, cada uno con su propio interruptor **RANKED: ACTIVADO/DESACTIVADO**), **COMBATE / ARENA** (1v1, con su dificultad Fácil/Normal/Difícil de siempre como chips dentro de la misma tarjeta, y 2v2) y **PRÁCTICA** (Práctica libre) — eliges una, confirmas, y vuelves al Lobby viendo el modo (y el estado de Ranked) elegidos; Cancelar no cambia nada. El botón **JUGAR** siempre inicia una partida en el modo actualmente seleccionado.
+- **Ranked ON/OFF** (solo aplica a Solo/Dúos/Tríos): con Ranked desactivado juegas exactamente la misma partida — mismos bots, misma zona/storm, misma dificultad — pero sin costo de entrada y sin que el resultado toque tu rango ni tus puntos competitivos; el HUD y la pantalla de resultados lo dejan claro ("PARTIDA NORMAL — no afecta tu rango") en vez de mostrar un confuso "+0". Con Ranked activado, todo funciona exactamente como siempre. El modo Ranked con amigos reales (ver más abajo) no tiene este interruptor — esas partidas siempre puntúan.
 
 ## Ranked Battle Royale
 
@@ -108,9 +109,21 @@ Modo separado (botón dorado **RANKED** en el menú principal), inspirado en el 
 ## Progresión: monedas, tienda, perfil
 
 - Ganas **+10 monedas** por cada eliminación (contra bots o en online).
-- **CUSTOMIZE**: elige color y sombrero de tu personaje entre los que ya desbloqueaste.
-- **ITEM SHOP**: gasta monedas para desbloquear colores/sombreros nuevos, con 6 rarezas (Common → Mythic).
-- **PROFILE**: nombre, insignia y progreso de rango actual (con puntos y cuánto falta para el siguiente), monedas, bajas totales, victorias, partidas jugadas (ahora incluye las partidas Ranked, antes solo contaba casual) y cosméticos desbloqueados.
+- **LOCKER** (antes Customize): elige color, sombrero y halo de tu personaje entre los que ya desbloqueaste — cada tarjeta muestra claramente si está Equipada, Desbloqueada, Bloqueada (🔒) o Bloqueada-con-motivo (rango o nivel de Pase de Batalla necesarios).
+- **ITEM SHOP**: gasta monedas para desbloquear colores/sombreros con precio, con 6 rarezas (Common → Mythic). Los cosméticos nuevos del Pase de Batalla (ver abajo) **no** están aquí a propósito — se consiguen jugando, no comprando.
+- **PROFILE**: nombre, insignia y progreso de rango actual (con puntos y cuánto falta para el siguiente), monedas, bajas totales, victorias, partidas jugadas (incluye las partidas Ranked) y cosméticos desbloqueados.
+
+## Cosméticos y Pase de Batalla
+
+**10 sombreros nuevos**, cada uno un diseño realmente distinto (no el mismo gorro repintado): Visera, Audífonos y Bucket Hat (comunes/uncommon), Bandana, Sombrero Pirata, Capucha Ninja y Casco Vikingo (uncommon/rare), Sombrero de Mago y Mohawk (epic), y Cresta de Dragón (legendary) — más **4 colores nuevos** (Turquesa, Lima, Naranja, Cian Hielo). Todos se consiguen jugando, a través del Pase de Batalla — ninguno está en la tienda de monedas.
+
+**PASE DE BATALLA** (botón propio en el Lobby, con tu nivel actual como subtítulo):
+
+- **XP es una moneda totalmente separada de las monedas** — ganas XP jugando: por cada eliminación, por terminar una partida (más si la ganas), por alcanzar Top 10/5/3 en Ranked (esto pasa sí o sí, tengas Ranked activado o no — el XP del pase no es "tu rango"), por tiempo sobrevivido (un goteo lento), y al reclamar un desafío diario o semanal. Las monedas por eliminación (+10 de siempre) no cambian en nada.
+- **30 niveles**, con una curva de XP pareja (empieza fácil, se hace más exigente hacia el final) para que subir se sienta bien sin poder completarse en un par de días. Cada nivel tiene una recompensa **gratis** (casi siempre monedas, con algunos sombreros/colores de regalo en niveles clave) y una recompensa **Premium** (casi siempre un cosmético exclusivo).
+- Barra de progreso, nivel actual, XP actual/necesaria y la ruta completa de 30 niveles siempre visibles en la pantalla del Pase — cada recompensa muestra si está bloqueada (por nivel o por Premium), lista para reclamar, o ya reclamada. **Las recompensas nunca se entregan solas** — hay que apretar RECLAMAR.
+- **Pase Premium**: cuesta **750 monedas** (entre un objeto Epic y uno Legendary de la tienda — ni regalado ni imposible), se paga con las mismas monedas de siempre, y desbloquea la columna Premium para todos los niveles — incluidos los que ya hayas alcanzado antes de comprarlo.
+- Todo se guarda (XP, nivel, si compraste Premium, qué reclamaste) igual que el resto del perfil — sobrevive a cerrar y reabrir el juego.
 
 ## Desafíos: misiones diarias y semanales
 
