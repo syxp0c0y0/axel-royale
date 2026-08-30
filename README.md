@@ -77,6 +77,14 @@ En cualquier modo por equipos (2v2 local o 2v2 online), los bots/compañeros rec
 
 **Mapa**: cada partida genera un terreno propio (no solo el diseño de cobertura) — zonas de tierra, arena y una laguna repartidas por el mapa, un par de caminos que las conectan, y árboles/arbustos/piedras decorativos esparcidos sobre el pasto. Todo eso es puramente visual (no bloquea disparos ni movimiento), para que el mapa se sienta vivo sin tocar el gameplay ya probado. Además de las cajas (crates) de siempre, cada partida coloca 2-3 pequeñas "casitas" (una estructura hueca de 3x3 con una entrada) como cobertura destructible extra — usan exactamente el mismo sistema de colisión/vida que las crates, solo con otra forma y color, así que son un punto de cobertura real, no decoración.
 
+## Lobby y navegación
+
+Menú principal rediseñado como un lobby real (interfaz original, no una copia de Fortnite):
+
+- **Barra superior fija**: LOBBY / LOCKER / ITEM SHOP / PROFILE, siempre visible en esas 4 secciones, con la sección activa resaltada. Ranked (amigos/leaderboard), Desafíos, y el modo clásico (1v1/2v2/Práctica) siguen accesibles como tarjetas secundarias desde el Lobby — no desaparecieron, solo dejaron de ocupar la pantalla principal permanentemente.
+- **Lobby**: tu personaje centrado, con el color/sombrero/halo que tengas equipados de verdad (se actualiza al instante si cambias algo en LOCKER, sin recargar), tu insignia de rango actual junto a tu nombre, y un fondo que se tiñe con el color de tu propio rango. Incluye una fila de "equipo" (tú + un espacio "+ Amigos · Próximamente" reservado para cuando exista ese sistema — no es un botón que finja funcionar, es espacio guardado a propósito).
+- **Selector de modo**: el botón "CAMBIAR MODO" abre una ventana con SOLO / DÚOS / TRÍOS — eliges una, confirmas, y vuelves al Lobby viendo el modo elegido (Cancelar no cambia nada). El botón **JUGAR** siempre inicia una partida Ranked en el modo actualmente seleccionado.
+
 ## Ranked Battle Royale
 
 Modo separado (botón dorado **RANKED** en el menú principal), inspirado en el antiguo Arena de Fortnite — **siempre contra bots**, sin matchmaking online.
