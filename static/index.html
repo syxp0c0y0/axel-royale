@@ -64,6 +64,7 @@ html,body{
 #scoreLine{font-family:'Rajdhani'; font-weight:700; font-size:15px; letter-spacing:.06em; color:var(--muted); text-transform:uppercase;}
 #scoreTally{display:flex; gap:6px; justify-content:flex-end; margin-top:6px;}
 #connStatus{font-family:'Rajdhani'; font-weight:600; font-size:11px; letter-spacing:.05em; margin-top:4px;}
+#spectateHint{font-family:'Rajdhani'; font-weight:600; font-size:11px; color:var(--muted); margin-top:2px;}
 #connStatus.ok{color:var(--build);}
 #connStatus.bad{color:var(--danger);}
 
@@ -79,6 +80,7 @@ html,body{
 .rk-stat .v{font-size:18px; font-weight:700; color:var(--ink); font-variant-numeric:tabular-nums;}
 .rk-stat .l{font-size:9px; color:var(--muted); text-transform:uppercase; letter-spacing:.05em;}
 #rankedMatchGain{font-family:'Rajdhani'; font-weight:600; font-size:11px; color:var(--build); margin-top:6px;}
+#zoneStatusLine{font-family:'Rajdhani'; font-weight:700; font-size:11px; color:#e6a3ff; margin-top:4px; text-transform:uppercase; letter-spacing:.04em;}
 #mapNameTag{
   position:fixed; top:16px; left:50%; transform:translateX(-50%); z-index:5;
   font-family:'Rajdhani'; font-weight:600; font-size:11px; letter-spacing:.1em; text-transform:uppercase;
@@ -409,6 +411,39 @@ h1.title{
   margin:14px 0 4px; font-variant-numeric:tabular-nums;
 }
 #lobbyStatus{min-height:20px;}
+.custom-code-input{
+  font-family:'Rajdhani'; font-weight:700; font-size:14px; letter-spacing:.1em; text-transform:uppercase;
+  text-align:center; background:var(--surface2); border:1px solid var(--line); border-radius:8px; color:var(--ink);
+  padding:9px 10px; width:100%; margin-bottom:8px;
+}
+.custom-code-input:focus{outline:none; border-color:var(--build);}
+.custom-code-input::placeholder{color:var(--muted); letter-spacing:.04em;}
+.recent-rooms{display:flex; flex-wrap:wrap; gap:6px; margin-top:2px;}
+.recent-room-chip{
+  font-family:'Rajdhani'; font-weight:700; font-size:12px; letter-spacing:.08em; color:var(--muted);
+  background:var(--surface2); border:1px solid var(--line); border-radius:6px; padding:5px 10px; cursor:pointer;
+}
+.recent-room-chip:hover{color:var(--ink); border-color:var(--build);}
+#spectateRow{display:flex; gap:8px; margin-bottom:14px;}
+#spectateCodeInput{
+  flex:1; font-family:'Rajdhani'; font-weight:700; font-size:16px; letter-spacing:.12em; text-transform:uppercase;
+  text-align:center; background:var(--surface2); border:1px solid var(--line); border-radius:8px; color:var(--ink);
+  padding:0 10px; min-width:0;
+}
+#spectateCodeInput:focus{outline:none; border-color:var(--build);}
+
+/* ---------- pre-match lobby (party lineup) ---------- */
+#lobbySlotsGrid{display:grid; grid-template-columns:repeat(auto-fit,minmax(110px,1fr)); gap:12px; margin:20px 0;}
+.lobby-slot{
+  background:var(--surface2); border:1px solid var(--line); border-radius:10px; padding:12px 8px;
+  display:flex; flex-direction:column; align-items:center; gap:6px; min-height:150px; justify-content:center;
+}
+.lobby-slot.filled{border-color:var(--build);}
+.lobby-slot canvas{width:64px; height:64px;}
+.lobby-slot .lobby-slot-name{font-family:'Rajdhani'; font-weight:700; font-size:13px; display:flex; align-items:center; gap:5px;}
+.lobby-slot .lobby-rank-badge{width:16px; height:16px; flex:0 0 auto;}
+.lobby-slot .lobby-slot-empty{font-family:'Rajdhani'; font-size:12px; color:var(--muted); text-transform:uppercase; letter-spacing:.06em;}
+#lobbyCountdownLine{font-family:'Rajdhani'; font-weight:700; font-size:15px; color:var(--build); letter-spacing:.05em;}
 
 @media (prefers-reduced-motion: reduce){
   .mode-btn, .slot, .bar-fill{transition:none;}
@@ -440,6 +475,7 @@ h1.title{
     <span class="tag bot" id="tagBot">BOT 0</span>
   </div>
   <div id="connStatus"></div>
+  <div id="spectateHint" class="hidden">Tab: cambiar de jugador</div>
 </div>
 
 <div id="rankedHud" class="hidden">
@@ -450,6 +486,8 @@ h1.title{
     <div class="rk-stat"><span class="v" id="rkTeamsLeft">0</span><span class="l">Equipos</span></div>
   </div>
   <div id="rankedMatchGain">+0 esta partida</div>
+  <div id="zoneStatusLine"></div>
+  <div id="spectateHintRanked" class="hidden">Tab: cambiar de jugador</div>
 </div>
 <div id="mapNameTag" class="hidden"></div>
 
@@ -509,14 +547,16 @@ h1.title{
       </div>
 
       <div class="cust-section-label">JUGAR CON AMIGOS (mismo equipo, contra bots)</div>
+      <input id="rankedCustomCodeInput" class="custom-code-input" maxlength="10" placeholder="CÓDIGO PERSONALIZADO (opcional)">
       <div class="modes" style="grid-template-columns:1fr 1fr; margin-bottom:8px;">
         <button class="mode-btn" id="createRankedDuosBtn">DÚOS CON AMIGO<span class="d">Sala para 2 jugadores reales</span></button>
         <button class="mode-btn" id="createRankedTriosBtn">TRÍOS CON AMIGOS<span class="d">Sala para 3 jugadores reales</span></button>
       </div>
       <div id="rankedLobbyRow">
-        <input id="rankedRoomCodeInput" maxlength="8" placeholder="CÓDIGO DE SALA">
+        <input id="rankedRoomCodeInput" maxlength="10" placeholder="CÓDIGO DE SALA">
         <button class="mode-btn" id="joinRankedRoomBtn" style="width:auto; white-space:nowrap;">UNIRSE</button>
       </div>
+      <div id="recentRankedRoomsRow" class="recent-rooms hidden"></div>
       <div class="code-display hidden" id="rankedRoomCodeDisplay"></div>
       <div class="sub" id="rankedLobbyStatus" style="margin:6px 0 18px; min-height:20px;"></div>
 
@@ -587,17 +627,25 @@ h1.title{
     <div id="onlineLobbyView" class="hidden">
       <p class="sub">Crea una sala y comparte el código, o únete con el código de tu rival.</p>
       <div id="lobbyBody">
+        <input id="customCodeInput" class="custom-code-input" maxlength="10" placeholder="CÓDIGO PERSONALIZADO (opcional)">
         <div class="modes" style="grid-template-columns:1fr 1fr; margin-bottom:4px;">
           <button class="mode-btn" id="createRoom1v1Btn">CREAR SALA 1V1<span class="d">Un rival, cada uno desde su casa</span></button>
           <button class="mode-btn" id="createRoom2v2Btn">CREAR SALA 2V2<span class="d">4 jugadores reales, 2 equipos</span></button>
         </div>
         <div id="lobbyRow">
-          <input id="roomCodeInput" maxlength="8" placeholder="CÓDIGO DE SALA">
+          <input id="roomCodeInput" maxlength="10" placeholder="CÓDIGO DE SALA">
           <button class="mode-btn" id="joinRoomBtn" style="width:auto; white-space:nowrap;">UNIRSE</button>
         </div>
+        <div id="recentRoomsRow" class="recent-rooms hidden"></div>
       </div>
       <div class="code-display hidden" id="roomCodeDisplay"></div>
       <div class="sub" id="lobbyStatus"></div>
+      <div class="cust-section-label" style="margin-top:18px;">MODO ESPECTADOR</div>
+      <p class="sub" style="margin:0 0 8px;">Mira una partida en curso (sirve para cualquier tipo de sala, normal o Ranked) sin jugarla.</p>
+      <div id="spectateRow">
+        <input id="spectateCodeInput" maxlength="10" placeholder="CÓDIGO DE SALA">
+        <button class="mode-btn" id="spectateBtn" style="width:auto; white-space:nowrap;">VER PARTIDA</button>
+      </div>
       <button class="mode-btn" id="lobbyBackBtn">VOLVER</button>
     </div>
   </div>
@@ -653,6 +701,15 @@ h1.title{
       <div class="rankup-sub" id="rankUpSub">GOLD → PLATINUM</div>
     </div>
     <button class="mode-btn" id="rankedResultsMenuBtn" style="margin-top:16px;">Volver al menú Ranked</button>
+  </div>
+</div>
+
+<div class="overlay hidden" id="onlineMatchLobby">
+  <div class="panel" id="lobbyMatchPanel">
+    <div class="eyebrow" id="lobbyMatchEyebrow">SALA</div>
+    <h1 class="title" id="lobbyMatchTitle" style="font-size:28px;">Esperando jugadores</h1>
+    <div id="lobbySlotsGrid"></div>
+    <div id="lobbyCountdownLine"></div>
   </div>
 </div>
 
@@ -754,7 +811,7 @@ function isRankedMode(m){ return m==='rankedSolo' || m==='rankedDuos' || m==='ra
 // True for a LOCAL ranked match (mode is literally rankedSolo/Duos/Trios) AND for an
 // online ranked-with-friends match (mode stays 'online' for networking purposes, but
 // onlineRankedMode records which ranked format the room was created for).
-function isAnyRankedMatch(){ return isRankedMode(mode) || (mode==='online' && !!onlineRankedMode); }
+function isAnyRankedMatch(){ return isRankedMode(mode) || ((mode==='online'||mode==='spectate') && !!onlineRankedMode); }
 function rankTierFor(points){
   for(const t of RANK_TIERS){ if(points>=t.min && points<=t.max) return t; }
   return RANK_TIERS[RANK_TIERS.length-1];
@@ -954,6 +1011,7 @@ let bullets = [];
 let particles = [];
 let beams = []; // sniper tracer lines {x1,y1,x2,y2,t,color}
 let floatTexts = [];
+let pings = []; // {x,y,t,from} team-only map markers, see the 'ping' network case and placePing()
 let respawnTimers = [];
 let winner = null;
 let rankedMatch = null; // {modeCfg, tier, entryCost, milestonesHit, placementPoints, eliminationPoints, pointsThisMatch, ended, placement, afterTier, rankedUp}
@@ -1042,19 +1100,25 @@ function setupOnlineRankedMatch(){
   const cfg = RANKED_MODE_CONFIG[onlineRankedMode];
   const tier = rankTierFor(profile.ranked.points);
   activeBotDiff = RANKED_BOT_DIFF[tier.id] || RANKED_BOT_DIFF.bronze;
-  const entryCost = RANKED_ENTRY_COST[tier.id]||0;
-  profile.ranked.points = Math.max(0, profile.ranked.points-entryCost);
-  saveProfile();
+  // A spectator isn't actually playing — no entry cost, no personal ranked-match record —
+  // but must still consume matchRng() in exactly the same pattern below as a real
+  // participant, or its map/anchors would desync from the real match it's watching.
+  const entryCost = isSpectating? 0 : (RANKED_ENTRY_COST[tier.id]||0);
+  if(!isSpectating){
+    profile.ranked.points = Math.max(0, profile.ranked.points-entryCost);
+    saveProfile();
+  }
 
   activeFighters = [];
   remoteFighters = [];
   for(let i=0;i<onlineCapacity;i++){
-    const f = (i===myPeerIndex)? player : makeFighter(false);
-    if(i!==myPeerIndex) f.isOnlineRemote = true;
+    const f = (i===myPeerIndex && !isSpectating)? player : makeFighter(false);
+    if(i!==myPeerIndex || isSpectating) f.isOnlineRemote = true;
     f.team = 0;
     activeFighters.push(f);
     remoteFighters[i] = f;
   }
+  if(isSpectating) player = activeFighters[spectateFollowIdx];
   bot = activeFighters.find(f=>f!==player) || player; // legacy alias, harmless here — ranked HUD never reads it
 
   for(let t=1;t<cfg.totalTeams;t++){
@@ -1098,16 +1162,36 @@ function setupOnlineRankedMatch(){
 function resetMatch(diffKey){
   mode = diffKey;
   solids.clear();
-  bullets = []; particles = []; beams = []; floatTexts = []; respawnTimers = [];
+  bullets = []; particles = []; beams = []; floatTexts = []; pings = []; respawnTimers = [];
   winner = null; rankedMatch = null;
   player = makeFighter(false);
   applyEquippedCosmetics(player);
-  // Online matches seed matchRng from the shared room code so every client builds the
-  // identical map/spawn layout without ever transmitting it; local matches keep using
-  // plain Math.random (no sync needed, and randomness there is harmless/desirable).
-  matchRng = (mode==='online' && myRoomCode)? mulberry32(hashStringToInt(myRoomCode)) : Math.random;
+  // Online matches (and spectating one) seed matchRng from the shared room code so every
+  // client builds the identical map/spawn layout without ever transmitting it; local
+  // matches keep using plain Math.random (no sync needed, and randomness there is
+  // harmless/desirable).
+  const seedCode = mode==='spectate'? spectateRoomCode : (mode==='online'? myRoomCode : null);
+  matchRng = seedCode? mulberry32(hashStringToInt(seedCode)) : Math.random;
 
-  if(mode==='2v2normal'){
+  if(mode==='spectate'){
+    if(onlineRankedMode){
+      setupOnlineRankedMatch(); // already fully isSpectating-aware — see its guards
+    } else {
+      activeBotDiff = DIFF.normal;
+      activeFighters = []; remoteFighters = [];
+      for(let i=0;i<onlineCapacity;i++){
+        const f = makeFighter(false);
+        f.isOnlineRemote = true;
+        f.team = i%2;
+        f.spawnPos = teamSpawnFor(f.team, Math.floor(i/2), onlineCapacity);
+        activeFighters.push(f);
+        remoteFighters[i] = f;
+        spawnFighter(f, f.spawnPos, f.spawnPos.angle);
+      }
+      player = activeFighters[spectateFollowIdx];
+    }
+    bot = activeFighters.find(f=>f!==player) || player;
+  } else if(mode==='2v2normal'){
     activeBotDiff = DIFF.normal;
     player.team = 0;
     const ally = makeFighter(true); ally.team = 0;
@@ -1153,6 +1237,7 @@ function resetMatch(diffKey){
 
   buildBoundaryWalls(null, isAnyRankedMatch());
   seedPickups();
+  if(isAnyRankedMatch()) initRankedZone(); else rankedZone = null;
   running = true; paused = false; time = 0; lastStateSendTime = 0; lastBotStateSendTime = 0;
   updateHUDStatic();
 }
@@ -1360,7 +1445,7 @@ function updatePickups(){
   // this client actually runs AI for (a local bot, or the host's ranked-with-friends
   // bots). An online rival/mirrored bot is network-driven — their collection arrives
   // as a 'pk' message instead.
-  const collectors = activeFighters.filter(f=>f.alive && (f===player || (f.isBot && (mode!=='online' || onlineIsHost()))));
+  const collectors = activeFighters.filter(f=>f.alive && !isSpectating && (f===player || (f.isBot && (mode!=='online' || onlineIsHost()))));
   pickups.forEach(pk=>{
     if(!pk.active){ if(time>=pk.respawnAt) pk.active=true; return; }
     for(const f of collectors){
@@ -1386,12 +1471,15 @@ window.addEventListener('keydown', e=>{
   const k = e.key.toLowerCase();
   keys[k] = true;
   if(!running || paused) return;
+  if(k==='tab' && isSpectating){ e.preventDefault(); cycleSpectateFollow(); return; }
+  if(isSpectating) return; // everything below is real input — a spectator never controls a fighter
   if(k>='1'&&k<='5'){ player.buildIdx=-1; player.consumableIdx=-1; player.weaponIdx = +k-1; }
   const bIdx = BUILDS.findIndex(b=>b.key===k);
   if(bIdx>=0){ player.buildIdx = bIdx; player.consumableIdx=-1; }
   const cIdx = CONSUMABLES.findIndex(c=>c.key===k);
   if(cIdx>=0){ player.consumableIdx = cIdx; player.buildIdx=-1; }
   if(k===' '){ e.preventDefault(); tryReload(player); }
+  if(k==='g' && player.alive) placePing(mouse.x+camX, mouse.y+camY); // keyboard fallback for the middle-click ping
   if(k==='escape'){ togglePause(); }
 });
 window.addEventListener('keyup', e=>{ keys[e.key.toLowerCase()]=false; });
@@ -1400,6 +1488,10 @@ canvas.addEventListener('mousemove', e=>{ mouse.x=e.clientX; mouse.y=e.clientY; 
 canvas.addEventListener('mousedown', e=>{
   if(e.button===0) mouse.down=true;
   if(e.button===2) mouse.rdown=true;
+  if(e.button===1){
+    e.preventDefault();
+    if(running && !paused && player.alive) placePing(mouse.x+camX, mouse.y+camY);
+  }
 });
 window.addEventListener('mouseup', e=>{
   if(e.button===0) mouse.down=false;
@@ -1597,18 +1689,19 @@ function renderCustomizeView(){
   drawPreviewCanvas(document.getElementById('custPreview'));
 }
 
-// The customize/profile preview builds its character from EXACTLY the same equipped
-// fields the in-game fighter reads (profile.equippedColor/Hat/Halo) — no hardcoded
-// preview-only values, and nothing renders here unless it's actually equipped.
-function drawPreviewCanvas(canvas){
+// Renders a character preview from an EXPLICIT cosmetic loadout — the single rendering
+// path shared by the customize/profile preview (your own equipped gear) and the
+// pre-match lobby slots (each teammate's equipped gear, as reported by their own
+// client) — one source of truth, no separate "preview-only" drawing logic to drift.
+function renderFighterPreview(canvas, colorId, hatId, haloId){
   const pctx = canvas.getContext('2d');
   const w=canvas.width, h=canvas.height;
   pctx.clearRect(0,0,w,h);
-  const colorDef = cosmeticById(profile.equippedColor);
+  const colorDef = cosmeticById(colorId) || cosmeticById('color_blue');
   const color = colorDef.hex;
   const skinTier = colorDef.rankReward;
-  const hat = cosmeticById(profile.equippedHat);
-  const halo = cosmeticById(profile.equippedHalo);
+  const hat = cosmeticById(hatId);
+  const halo = cosmeticById(haloId);
   const cx=w/2, cy=h/2+8, r=34;
   pctx.beginPath(); pctx.ellipse(cx,cy+r*0.75,r*0.9,r*0.35,0,0,Math.PI*2);
   pctx.fillStyle='rgba(0,0,0,0.35)'; pctx.fill();
@@ -1625,6 +1718,12 @@ function drawPreviewCanvas(canvas){
   if(halo && halo.shape!=='none'){
     withCtx(pctx, ()=> drawRankHalo(halo.shape, cx, cy, r, 1.7));
   }
+}
+// The customize/profile preview builds its character from EXACTLY the same equipped
+// fields the in-game fighter reads (profile.equippedColor/Hat/Halo) — no hardcoded
+// preview-only values, and nothing renders here unless it's actually equipped.
+function drawPreviewCanvas(canvas){
+  renderFighterPreview(canvas, profile.equippedColor, profile.equippedHat, profile.equippedHalo);
 }
 // drawHat/roundRect draw against the module-level `ctx` — temporarily point it at
 // a different canvas (e.g. a menu preview) so the exact same drawing code renders there too.
@@ -1751,6 +1850,9 @@ function togglePause(){
 // itself, which is a separate, much larger project (see README).
 let ws=null, myRoomCode=null, myPeerIndex=0, onlineCapacity=2, lastStateSendTime=0, lastBotStateSendTime=0;
 let onlineRankedMode = null; // null = plain online 1v1/2v2; 'rankedDuos'/'rankedTrios' = ranked-with-friends
+let isSpectating = false, spectateRoomCode = null, spectateFollowIdx = 0;
+let lobbyRoster = []; // netId -> {name, equippedColor, equippedHat, equippedHalo, rankTierId} while waiting in the pre-match lobby
+let lobbyCountdownTimer = null;
 let remoteFighters = []; // netId -> fighter object (human peer slots AND, in ranked-with-friends, bots too); remoteFighters[myPeerIndex] === player
 let matchRng = Math.random; // seeded (from the room code) for online matches so every client builds the identical map/spawns without transmitting them
 function mulberry32(seed){
@@ -1782,6 +1884,46 @@ const createRankedDuosBtn = document.getElementById('createRankedDuosBtn');
 const createRankedTriosBtn = document.getElementById('createRankedTriosBtn');
 const joinRankedRoomBtn = document.getElementById('joinRankedRoomBtn');
 const rankedRoomCodeInput = document.getElementById('rankedRoomCodeInput');
+const customCodeInput = document.getElementById('customCodeInput');
+const rankedCustomCodeInput = document.getElementById('rankedCustomCodeInput');
+const recentRoomsRow = document.getElementById('recentRoomsRow');
+const recentRankedRoomsRow = document.getElementById('recentRankedRoomsRow');
+const spectateCodeInput = document.getElementById('spectateCodeInput');
+const spectateBtn = document.getElementById('spectateBtn');
+
+// Recent room codes (created or joined), kept purely client-side — there's no account
+// system, so this is the closest thing to "recent matches" without a backend: a quick way
+// to reuse the same code with the same friend without re-typing/re-sharing it every time.
+const RECENT_ROOMS_KEY = 'axelsRoyaleRecentRooms_v1';
+const MAX_RECENT_ROOMS = 6;
+function loadRecentRooms(){
+  try{ const raw = JSON.parse(localStorage.getItem(RECENT_ROOMS_KEY)); return Array.isArray(raw)? raw : []; }
+  catch(e){ return []; }
+}
+function saveRecentRoom(code, label){
+  try{
+    let list = loadRecentRooms().filter(r=>r.code!==code);
+    list.unshift({code, label, t:Date.now()});
+    list = list.slice(0, MAX_RECENT_ROOMS);
+    localStorage.setItem(RECENT_ROOMS_KEY, JSON.stringify(list));
+  } catch(e){ /* storage unavailable — recent rooms just won't persist */ }
+}
+function renderRecentRooms(){
+  const all = loadRecentRooms();
+  [[recentRoomsRow, roomCodeInput, r=>!r.ranked], [recentRankedRoomsRow, rankedRoomCodeInput, r=>r.ranked]].forEach(([row, input, filter])=>{
+    const list = all.filter(filter);
+    row.innerHTML = '';
+    row.classList.toggle('hidden', list.length===0);
+    list.forEach(r=>{
+      const chip = document.createElement('div');
+      chip.className = 'recent-room-chip';
+      chip.textContent = r.code + (r.label? ' · '+r.label : '');
+      chip.addEventListener('click', ()=>{ input.value = r.code; });
+      row.appendChild(chip);
+    });
+  });
+}
+renderRecentRooms();
 
 let lobbyContext = 'plain'; // 'plain' or 'ranked' — which lobby UI the current ws session belongs to
 function setLobbyStatus(txt){
@@ -1825,12 +1967,14 @@ function connectWS(onOpen){
 
 createRoom1v1Btn.addEventListener('click', ()=>{
   lobbyContext='plain';
-  const doCreate = ()=> ws.send(JSON.stringify({type:'create', capacity:2}));
+  const custom = customCodeInput.value.trim().toUpperCase();
+  const doCreate = ()=> ws.send(JSON.stringify({type:'create', capacity:2, customCode:custom||undefined}));
   if(ws && ws.readyState===1) doCreate(); else connectWS(doCreate);
 });
 createRoom2v2Btn.addEventListener('click', ()=>{
   lobbyContext='plain';
-  const doCreate = ()=> ws.send(JSON.stringify({type:'create', capacity:4}));
+  const custom = customCodeInput.value.trim().toUpperCase();
+  const doCreate = ()=> ws.send(JSON.stringify({type:'create', capacity:4, customCode:custom||undefined}));
   if(ws && ws.readyState===1) doCreate(); else connectWS(doCreate);
 });
 joinRoomBtn.addEventListener('click', ()=>{
@@ -1840,14 +1984,23 @@ joinRoomBtn.addEventListener('click', ()=>{
   const doJoin = ()=> ws.send(JSON.stringify({type:'join', room:code}));
   if(ws && ws.readyState===1) doJoin(); else connectWS(doJoin);
 });
+spectateBtn.addEventListener('click', ()=>{
+  lobbyContext='plain';
+  const code = spectateCodeInput.value.trim().toUpperCase();
+  if(!code){ setLobbyStatus('Escribe un código de sala para ver.'); return; }
+  const doSpectate = ()=> ws.send(JSON.stringify({type:'spectate', room:code}));
+  if(ws && ws.readyState===1) doSpectate(); else connectWS(doSpectate);
+});
 createRankedDuosBtn.addEventListener('click', ()=>{
   lobbyContext='ranked';
-  const doCreate = ()=> ws.send(JSON.stringify({type:'create', capacity:2, rankedMode:'rankedDuos'}));
+  const custom = rankedCustomCodeInput.value.trim().toUpperCase();
+  const doCreate = ()=> ws.send(JSON.stringify({type:'create', capacity:2, rankedMode:'rankedDuos', customCode:custom||undefined}));
   if(ws && ws.readyState===1) doCreate(); else connectWS(doCreate);
 });
 createRankedTriosBtn.addEventListener('click', ()=>{
   lobbyContext='ranked';
-  const doCreate = ()=> ws.send(JSON.stringify({type:'create', capacity:3, rankedMode:'rankedTrios'}));
+  const custom = rankedCustomCodeInput.value.trim().toUpperCase();
+  const doCreate = ()=> ws.send(JSON.stringify({type:'create', capacity:3, rankedMode:'rankedTrios', customCode:custom||undefined}));
   if(ws && ws.readyState===1) doCreate(); else connectWS(doCreate);
 });
 joinRankedRoomBtn.addEventListener('click', ()=>{
@@ -1866,17 +2019,22 @@ function handleWSMessage(msg){
         setLobbyStatus('Sala creada ('+RANKED_MODE_CONFIG[onlineRankedMode].label+' con amigos) — comparte este código:');
         rankedRoomCodeDisplay.textContent = myRoomCode;
         rankedRoomCodeDisplay.classList.remove('hidden');
+        saveRecentRoom(myRoomCode, RANKED_MODE_CONFIG[onlineRankedMode].label);
       } else {
         setLobbyStatus('Sala creada ('+(msg.capacity===4?'2v2':'1v1')+') — comparte este código:');
         roomCodeDisplay.textContent = myRoomCode;
         roomCodeDisplay.classList.remove('hidden');
+        saveRecentRoom(myRoomCode, msg.capacity===4?'2v2':'1v1');
       }
+      renderRecentRooms();
       break;
     case 'joined':
       myRoomCode = msg.room; onlineCapacity = msg.capacity; onlineRankedMode = msg.rankedMode||null;
       setLobbyStatus(msg.waiting
         ? 'Unido a la sala '+msg.room+'. Esperando más jugadores…'
         : 'Unido a la sala '+msg.room+'. Iniciando…');
+      saveRecentRoom(myRoomCode, onlineRankedMode? RANKED_MODE_CONFIG[onlineRankedMode].label : (msg.capacity===4?'2v2':'1v1'));
+      renderRecentRooms();
       break;
     case 'notfound':
       setLobbyStatus('No existe ninguna sala con ese código.');
@@ -1884,11 +2042,23 @@ function handleWSMessage(msg){
     case 'full':
       setLobbyStatus('Esa sala ya está completa.');
       break;
+    case 'codeTaken':
+      setLobbyStatus('Ese código personalizado ya está en uso — prueba otro.');
+      break;
+    case 'codeInvalid':
+      setLobbyStatus('Código inválido — usa solo letras/números, de 3 a 10 caracteres.');
+      break;
     case 'ready':
       myPeerIndex = msg.you; onlineCapacity = msg.capacity; onlineRankedMode = msg.rankedMode||null;
       document.getElementById('startScreen').classList.add('hidden');
-      resetMatch('online');
+      showOnlineMatchLobby();
       setConnStatus('Conectado', true);
+      break;
+    case 'spectating':
+      onlineCapacity = msg.capacity; onlineRankedMode = msg.rankedMode||null; spectateRoomCode = msg.room;
+      document.getElementById('startScreen').classList.add('hidden');
+      onlineLobbyView.classList.add('hidden');
+      startSpectating();
       break;
     case 'peerLeft':
       onlinePeerLeft();
@@ -1913,7 +2083,7 @@ function handleGameMessage(data){
   const from = remoteFighters[data.from];
   switch(data.k){
     case 's': {
-      if(!from || from===player) break;
+      if(!from || (from===player && !isSpectating)) break;
       from.hp = data.hp; from.alive = data.alive; from.deaths = data.deaths; from.kills = data.kills||0;
       from.shield = data.shield||0;
       from.weaponIdx = data.weaponIdx; from.buildIdx = data.buildIdx; from.reloading = data.reloading;
@@ -1938,6 +2108,10 @@ function handleGameMessage(data){
     case 'rk': {
       // Host-authoritative ranked-with-friends match progress (see isMatchAuthority());
       // every non-host human applies the host's decision instead of computing its own.
+      // A spectator is never a participant, so it must never touch its own ranked
+      // points/placement just because it's watching — it can still see the same live
+      // Top10/5/3 progress via teamsRemainingCount(), just without personal stakes.
+      if(isSpectating){ if(data.ev==='end') showToast('PARTIDA TERMINADA — placement #'+data.placement); break; }
       if(!rankedMatch) break;
       if(data.ev==='milestone') applyRankedMilestone(data.thresh, data.pts);
       else if(data.ev==='end') applyRankedMatchEnd(data.placement);
@@ -1965,6 +2139,26 @@ function handleGameMessage(data){
       if(pk && pk.active){ pk.active=false; pk.respawnAt = time+PICKUP_RESPAWN_MS; }
       break;
     }
+    case 'lobbyInfo': {
+      // Sent once by each human right as they enter the pre-match lobby (see
+      // sendLobbyInfo()) so everyone's party-lineup slot can show their real
+      // equipped skin/hat/halo and rank, not a placeholder.
+      lobbyRoster[data.from] = {
+        name: data.name, equippedColor: data.equippedColor, equippedHat: data.equippedHat,
+        equippedHalo: data.equippedHalo, rankTierId: data.rankTierId,
+      };
+      renderLobbySlots();
+      break;
+    }
+    case 'ping': {
+      // A teammate marked a spot on the map — purely a shared visual marker, no
+      // gameplay effect. Only meaningful for the player's own team, so a client
+      // only ever needs to render pings from fighters on its own team.
+      if(from && from.team===player.team){
+        pings.push({x:data.x, y:data.y, t:0, from});
+      }
+      break;
+    }
   }
 }
 
@@ -1974,10 +2168,15 @@ function setConnStatus(txt, ok){
   el.className = ok? 'ok':'bad';
 }
 
+const onlineMatchLobbyEl = document.getElementById('onlineMatchLobby');
 function onlinePeerLeft(){
   if(mode==='online' && running){
     running = false;
     showDisconnectScreen();
+  } else if(!onlineMatchLobbyEl.classList.contains('hidden')){
+    location.reload(); // mid pre-match-lobby disconnect — cleanest way to drop the ws and reset
+  } else if(isSpectating){
+    location.reload();
   } else {
     setLobbyStatus('Alguien se desconectó de la sala. Puedes crear o unirte a otra.');
   }
@@ -1987,10 +2186,101 @@ function onlineDisconnected(){
     running = false;
     setConnStatus('Desconectado', false);
     showDisconnectScreen();
+  } else if(!onlineMatchLobbyEl.classList.contains('hidden') || isSpectating){
+    location.reload();
   } else if(!onlineLobbyView.classList.contains('hidden')){
     setLobbyStatus('Se perdió la conexión con el servidor.');
     setLobbyButtonsDisabled(false);
   }
+}
+
+// ============================== PRE-MATCH LOBBY (party lineup) ==============================
+// Shown for a few seconds right after a room fills, so real teammates can see each
+// other's actual equipped skin/hat/halo and rank before the match starts — not a fake
+// "waiting" spinner. Reuses renderFighterPreview() (see Customize) for the mini avatars,
+// so a slot can never show something different from what that player really has equipped.
+function myLobbyInfo(){
+  return {
+    name: displayName(profile.name), equippedColor: profile.equippedColor,
+    equippedHat: profile.equippedHat, equippedHalo: profile.equippedHalo,
+    rankTierId: rankTierFor(profile.ranked.points).id,
+  };
+}
+function sendLobbyInfo(){ sendGame(Object.assign({k:'lobbyInfo'}, myLobbyInfo())); }
+function renderLobbySlots(){
+  const grid = document.getElementById('lobbySlotsGrid');
+  grid.innerHTML = '';
+  for(let i=0;i<onlineCapacity;i++){
+    const info = i===myPeerIndex? myLobbyInfo() : lobbyRoster[i];
+    const slot = document.createElement('div');
+    slot.className = 'lobby-slot'+(info?' filled':'');
+    if(info){
+      const canvas = document.createElement('canvas');
+      canvas.width = 96; canvas.height = 96;
+      slot.appendChild(canvas);
+      renderFighterPreview(canvas, info.equippedColor, info.equippedHat, info.equippedHalo);
+      const nameLine = document.createElement('div');
+      nameLine.className = 'lobby-slot-name';
+      const tier = RANK_TIERS.find(t=>t.id===info.rankTierId);
+      nameLine.innerHTML = (tier? `<span class="lobby-rank-badge">${rankBadgeSvg(tier)}</span>` : '') +
+        `<span>${info.name}${i===myPeerIndex?' (tú)':''}</span>`;
+      slot.appendChild(nameLine);
+    } else {
+      const empty = document.createElement('div');
+      empty.className = 'lobby-slot-empty';
+      empty.textContent = 'Esperando…';
+      slot.appendChild(empty);
+    }
+    grid.appendChild(slot);
+  }
+}
+function showOnlineMatchLobby(){
+  lobbyRoster = [];
+  document.getElementById('lobbyMatchEyebrow').textContent = onlineRankedMode
+    ? 'RANKED · '+RANKED_MODE_CONFIG[onlineRankedMode].label.toUpperCase()+' CON AMIGOS' : (onlineCapacity===4?'SALA 2V2':'SALA 1V1');
+  document.getElementById('lobbyMatchTitle').textContent = 'Tu equipo';
+  renderLobbySlots();
+  onlineMatchLobbyEl.classList.remove('hidden');
+  sendLobbyInfo();
+  setTimeout(sendLobbyInfo, 700); // resend once in case the first one raced the socket
+  let secs = 3;
+  const line = document.getElementById('lobbyCountdownLine');
+  line.textContent = 'Empezando en '+secs+'…';
+  clearInterval(lobbyCountdownTimer);
+  lobbyCountdownTimer = setInterval(()=>{
+    secs--;
+    if(secs<=0){
+      clearInterval(lobbyCountdownTimer);
+      onlineMatchLobbyEl.classList.add('hidden');
+      resetMatch('online');
+      return;
+    }
+    line.textContent = 'Empezando en '+secs+'…';
+  }, 1000);
+}
+
+// ============================== SPECTATOR MODE ==============================
+// A read-only view of someone else's match: the client builds the exact same
+// deterministic roster/map as the real players (see the matchRng seeding above) so the
+// world looks identical, but never runs bot AI, never applies its own damage/zone/rank
+// decisions, and never sends a state broadcast of its own — every fighter it shows,
+// including the "camera" one, is purely driven by the real players' broadcasts (see the
+// isSpectating checks throughout handleGameMessage/updateNetworkPeer/botThink/botAct).
+function startSpectating(){
+  isSpectating = true;
+  spectateFollowIdx = 0;
+  resetMatch('spectate');
+  setConnStatus('Viendo partida', true);
+}
+// Tab cycles which fighter the camera/HUD follows — `player` is just an alias to
+// whichever fighter that currently is, so reassigning it is all the camera needs.
+function cycleSpectateFollow(){
+  if(!isSpectating || !activeFighters.length) return;
+  for(let i=1;i<=activeFighters.length;i++){
+    const idx = (spectateFollowIdx+i)%activeFighters.length;
+    if(activeFighters[idx].alive){ spectateFollowIdx = idx; break; }
+  }
+  player = activeFighters[spectateFollowIdx];
 }
 function showDisconnectScreen(){
   const endScreen = document.getElementById('endScreen');
@@ -2248,6 +2538,90 @@ function applyRankedMatchEnd(placement){
   setTimeout(showRankedResultsScreen, 900);
 }
 
+// ============================== RANKED: SHRINKING ZONE (STORM) ==============================
+// Ranked-only: without this, a player could just hide for the whole match. {t: match-time
+// in ms, frac: safe-zone radius as a fraction of the base radius} checkpoints — the radius
+// interpolates smoothly between consecutive checkpoints; dps (damage/sec to whoever's
+// outside) only changes at the START of each shrink, matching how real BR storms feel.
+const ZONE_PHASES = [
+  {t:0,      frac:1.00, dps:0},
+  {t:22000,  frac:1.00, dps:0},
+  {t:52000,  frac:0.60, dps:2},
+  {t:82000,  frac:0.60, dps:2},
+  {t:112000, frac:0.35, dps:4},
+  {t:142000, frac:0.35, dps:4},
+  {t:172000, frac:0.16, dps:7},
+  {t:202000, frac:0.16, dps:7},
+  {t:232000, frac:0.0,  dps:12},
+];
+let rankedZone = null; // {cx, cy, baseR, radius, dps, nextT, shrinking}
+function initRankedZone(){
+  const baseR = Math.min(WORLD_W, WORLD_H)*0.48;
+  const marginX = WORLD_W*0.28, marginY = WORLD_H*0.28;
+  rankedZone = {
+    cx: marginX + matchRng()*(WORLD_W-marginX*2),
+    cy: marginY + matchRng()*(WORLD_H-marginY*2),
+    baseR, radius: baseR, dps:0, nextT: ZONE_PHASES[1].t, shrinking:false,
+  };
+}
+function zonePhaseAt(t){
+  for(let i=0;i<ZONE_PHASES.length-1;i++){
+    const a=ZONE_PHASES[i], b=ZONE_PHASES[i+1];
+    if(t>=a.t && t<b.t){
+      const p = (t-a.t)/(b.t-a.t);
+      return {frac: a.frac+(b.frac-a.frac)*p, dps:a.dps, nextT:b.t, shrinking:a.frac!==b.frac};
+    }
+  }
+  const last = ZONE_PHASES[ZONE_PHASES.length-1];
+  return {frac:last.frac, dps:last.dps, nextT:last.t, shrinking:false};
+}
+// Environmental damage has no attacker — reuses the same ranked-death routing as combat
+// (handleRankedDeath) so placement/elimination bookkeeping stays correct either way.
+function applyStormDamage(f, dmgPerSec, dt){
+  if(!f.alive) return;
+  f.hp -= dmgPerSec*dt;
+  if(f.hp<=0){
+    f.hp = 0; f.alive = false; f.deaths++;
+    spawnSparks(f.x, f.y, '#ff5c5c', 18);
+    handleRankedDeath(f);
+  }
+}
+function updateRankedZone(dt){
+  if(!isAnyRankedMatch() || !rankedZone) return;
+  const ph = zonePhaseAt(time);
+  rankedZone.radius = rankedZone.baseR*ph.frac;
+  rankedZone.dps = ph.dps;
+  rankedZone.nextT = ph.nextT;
+  rankedZone.shrinking = ph.shrinking;
+  if(ph.dps<=0) return;
+  activeFighters.forEach(f=>{
+    if(!f.alive) return;
+    // Each client only ever applies storm damage to fighters it actually owns the hp
+    // of — itself, and (for the host in ranked-with-friends, or always in local ranked)
+    // the bots it simulates — exactly the same ownership rule botThink/botAct already use.
+    const owns = !isSpectating && (f===player || (f.isBot && (mode!=='online' || onlineIsHost())));
+    if(!owns) return;
+    const d = Math.hypot(f.x-rankedZone.cx, f.y-rankedZone.cy);
+    if(d > rankedZone.radius) applyStormDamage(f, ph.dps, dt);
+  });
+}
+function drawZone(){
+  if(!isAnyRankedMatch() || !rankedZone) return;
+  const {cx, cy, radius} = rankedZone;
+  ctx.save();
+  ctx.beginPath();
+  ctx.rect(0,0,WORLD_W,WORLD_H);
+  ctx.moveTo(cx+radius, cy);
+  ctx.arc(cx, cy, radius, 0, Math.PI*2, true);
+  ctx.closePath();
+  ctx.fillStyle = 'rgba(150,30,190,0.16)';
+  ctx.fill('evenodd');
+  ctx.strokeStyle = 'rgba(230,140,255,0.85)'; ctx.lineWidth = 4;
+  ctx.shadowColor = 'rgba(200,80,255,0.6)'; ctx.shadowBlur = 10;
+  ctx.beginPath(); ctx.arc(cx, cy, radius, 0, Math.PI*2); ctx.stroke();
+  ctx.restore();
+}
+
 // ============================== FIRE / BUILD ==============================
 function currentWeapon(f){ return WEAPONS[f.weaponIdx]; }
 
@@ -2434,7 +2808,7 @@ function nearestActivePickupFor(self, maxRange){
 
 function botThink(self, dt){
   if(!self.alive || !self.isBot) return;
-  if(mode==='practice' || (mode==='online' && !onlineIsHost())) return;
+  if(mode==='practice' || mode==='spectate' || (mode==='online' && !onlineIsHost())) return;
   const diff = activeBotDiff || DIFF.normal;
   self.speed = 220*diff.speed;
   if(time < self.aiNextDecision) return;
@@ -2504,7 +2878,7 @@ function botThink(self, dt){
 
 function botAct(self, dt){
   if(!self.alive || !self.isBot) return;
-  if(mode==='practice' || (mode==='online' && !onlineIsHost())) return;
+  if(mode==='practice' || mode==='spectate' || (mode==='online' && !onlineIsHost())) return;
 
   // Consumable channel reuses the exact same generic system the player uses.
   if(self._consumeDecision){
@@ -2550,10 +2924,10 @@ function botAct(self, dt){
 
 // ============================== NETWORK PEER SMOOTHING (online only) ==============================
 function updateNetworkPeer(dt){
-  if(mode!=='online') return;
+  if(mode!=='online' && mode!=='spectate') return;
   const k = Math.min(1, dt*14);
   remoteFighters.forEach(f=>{
-    if(!f || f===player || !f.netTarget) return;
+    if(!f || (f===player && !isSpectating) || !f.netTarget) return;
     const t = f.netTarget;
     f.x += (t.x-f.x)*k;
     f.y += (t.y-f.y)*k;
@@ -2671,6 +3045,7 @@ function updateParticles(dt){
   }
   for(let i=beams.length-1;i>=0;i--){ beams[i].t+=dt*1000; if(beams[i].t>140) beams.splice(i,1); }
   for(let i=floatTexts.length-1;i>=0;i--){ floatTexts[i].t+=dt; floatTexts[i].y-=dt*28; if(floatTexts[i].t>0.9) floatTexts.splice(i,1); }
+  for(let i=pings.length-1;i>=0;i--){ pings[i].t+=dt; if(pings[i].t>4) pings.splice(i,1); }
 }
 
 function updateRespawns(){
@@ -2702,6 +3077,7 @@ function draw(){
   ctx.translate(-camX,-camY);
 
   drawGround();
+  drawZone();
   drawSolids();
   drawPickups();
   drawParticlesBelow();
@@ -2710,6 +3086,7 @@ function draw(){
   drawBullets();
   drawBeams();
   drawFloatTexts();
+  drawPings();
 
   ctx.restore();
 }
@@ -3238,7 +3615,7 @@ function roundRect(x,y,w,h,r){
 
 function drawFighter(f){
   if(!f.alive) return;
-  const isP = f===player;
+  const isP = f===player && !isSpectating;
   const bodyColor = f.color || (isP? '#ff8a5c' : (f.team===player.team? '#5ce0ff':'#ff5c74'));
   ctx.save();
   ctx.translate(f.x,f.y);
@@ -3353,6 +3730,31 @@ function drawFloatTexts(){
     ctx.restore();
   });
 }
+// Team-only map markers: a bouncing chevron + a fading ground ring, with the pinging
+// teammate's name underneath — purely visual, no gameplay effect (see placePing()).
+function drawPings(){
+  pings.forEach(p=>{
+    const bob = Math.sin(p.t*6)*6;
+    const fade = Math.max(0, 1-p.t/4);
+    ctx.save(); ctx.globalAlpha = fade;
+    ctx.strokeStyle = '#ffd166'; ctx.lineWidth = 2;
+    ctx.beginPath(); ctx.ellipse(p.x, p.y, 16+p.t*6, 7+p.t*2, 0, 0, Math.PI*2); ctx.stroke();
+    ctx.translate(p.x, p.y-34-bob);
+    ctx.beginPath();
+    ctx.moveTo(0,10); ctx.lineTo(-8,-6); ctx.lineTo(0,-1); ctx.lineTo(8,-6); ctx.closePath();
+    ctx.fillStyle = '#ffd166'; ctx.fill();
+    ctx.font="700 11px Rajdhani, sans-serif"; ctx.fillStyle='#fff'; ctx.textAlign='center';
+    ctx.fillText((p.from&&p.from.name)||'ALIADO', 0, -12);
+    ctx.restore();
+  });
+}
+// Places a ping at the given world point and shares it with teammates — anyone can call
+// this for themselves (f===player) or, on the host, on a bot's behalf isn't needed since
+// bots don't ping; kept simple to just the local player's own marker.
+function placePing(x, y){
+  pings.push({x, y, t:0, from:player});
+  if(mode==='online') sendGame({k:'ping', x, y});
+}
 
 // ============================== HUD ==============================
 const actionBar = document.getElementById('actionBar');
@@ -3384,11 +3786,13 @@ buildActionBar();
 
 function updateHUDStatic(){
   document.getElementById('scoreLine').textContent = mode==='practice'? 'PRÁCTICA LIBRE' : 'PRIMERO A '+killsToWinFor(mode);
-  document.getElementById('connStatus').textContent = mode==='online'? 'Conectado' : '';
-  document.getElementById('connStatus').className = mode==='online'? 'ok' : '';
+  document.getElementById('connStatus').textContent = mode==='spectate'? 'Viendo partida' : (mode==='online'? 'Conectado' : '');
+  document.getElementById('connStatus').className = (mode==='online'||mode==='spectate')? 'ok' : '';
   const ranked = isAnyRankedMatch();
   document.getElementById('topRight').classList.toggle('hidden', ranked);
   document.getElementById('rankedHud').classList.toggle('hidden', !ranked);
+  document.getElementById('spectateHint').classList.toggle('hidden', !isSpectating);
+  document.getElementById('spectateHintRanked').classList.toggle('hidden', !isSpectating);
   const mapTag = document.getElementById('mapNameTag');
   mapTag.classList.toggle('hidden', !MAP_NAMES[currentMapKey]);
   mapTag.textContent = MAP_NAMES[currentMapKey]||'';
@@ -3409,6 +3813,13 @@ function updateHUD(){
     document.getElementById('rkTeamsLeft').textContent = teamsRemainingCount();
     const gain = rankedMatch.pointsThisMatch;
     document.getElementById('rankedMatchGain').textContent = (gain>=0?'+':'')+gain+' esta partida';
+    const zoneEl = document.getElementById('zoneStatusLine');
+    if(rankedZone){
+      const secsLeft = Math.max(0, Math.ceil((rankedZone.nextT-time)/1000));
+      zoneEl.textContent = rankedZone.shrinking
+        ? 'ZONA CERRÁNDOSE — '+secsLeft+'s'
+        : (rankedZone.nextT>time? 'ZONA SE CIERRA EN '+secsLeft+'s' : 'ZONA CERRADA');
+    }
   } else if(isTeamMode()){
     document.getElementById('tagMe').textContent = 'TU EQUIPO '+teamKills(player.team);
     const enemyTeam = activeFighters.map(f=>f.team).find(t=>t!==player.team);
@@ -3535,13 +3946,14 @@ function loop(now){
   if(running && !paused){
     time += dt*1000;
     activeFighters.forEach(f=>{ if(f.isBot){ botThink(f,dt); botAct(f,dt); } });
-    updatePlayer(dt);
+    if(!isSpectating) updatePlayer(dt);
     updateNetworkPeer(dt);
     updateBullets(dt);
     updateParticles(dt);
     updateRespawns();
     updatePickups();
     matsRegen(dt);
+    updateRankedZone(dt);
     sendMyStateIfDue();
     sendBotStatesIfDue();
   }
