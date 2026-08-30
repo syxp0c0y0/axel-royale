@@ -285,6 +285,11 @@ h1.title{
 .halo-holo{ animation:haloHueRotate 4s linear infinite; }
 /* Rank-reward skin swatches: a metallic/holographic gradient circle instead of a flat fill. */
 .rank-skin-swatch{ box-shadow:inset 0 0 8px rgba(255,255,255,.3), inset 0 -6px 10px rgba(0,0,0,.25); }
+/* Unreal SKIN shimmer: a narrow hue-rotate oscillation (not a full 360 sweep like the halo's
+   .halo-holo) so it stays inside its own purple/magenta/pink/cyan/blue family instead of
+   drifting through red/orange/yellow/green and reading as a generic rainbow. */
+@keyframes skinHoloShift{ 0%,100%{filter:hue-rotate(-25deg);} 50%{filter:hue-rotate(25deg);} }
+.holo-skin{ animation:skinHoloShift 4s ease-in-out infinite; }
 /* Unreal cards get an animated holographic border/glow — cycling actual border-color and
    box-shadow stops (NOT a filter:hue-rotate on the whole card, which would also discolor
    the card's text and icons) to match the skin/halo. */
@@ -1523,7 +1528,7 @@ function rankSkinSwatchHTML(tierId){
   const id = RANK_IDENTITY[tierId];
   if(!id) return `<div class="swatch"></div>`;
   if(tierId==='unreal'){
-    return `<div class="swatch rank-skin-swatch halo-holo" style="background:linear-gradient(135deg,#c084fc,#ec4899,#f472b6,#22d3ee,#3b82f6);"></div>`;
+    return `<div class="swatch rank-skin-swatch holo-skin" style="background:linear-gradient(135deg,#9333ea,#ec4899,#f472b6,#22d3ee,#3b82f6);"></div>`;
   }
   const stops = id.gradient.map(([o,col])=>`${col} ${Math.round(o*100)}%`).join(', ');
   return `<div class="swatch rank-skin-swatch" style="background:linear-gradient(135deg, ${stops});"></div>`;
@@ -2922,15 +2927,27 @@ function haloSwatchSvg(shape,color){
   };
   return `<svg viewBox="0 0 32 24" width="56" height="40" style="overflow:visible">${bodies[shape]||''}</svg>`;
 }
-// Unreal's fill is a slowly-cycling hue sweep through purple/magenta/pink/cyan/electric
-// blue rather than a fixed gradient — the "holográfico/iridiscente" look the top rank needs.
+// Unreal's skin cycles ONLY through its own holographic family (purple → magenta → pink
+// → cyan → electric blue) — a full 0-360 hue sweep would pass through red/orange/yellow/
+// green too and read as a generic rainbow instead of a rank-specific holographic effect.
+const UNREAL_SKIN_PALETTE = ['#9333ea','#ec4899','#f472b6','#22d3ee','#3b82f6'];
+function lerpHexColor(hexA, hexB, t){
+  const a = hexToRgb(hexA), b = hexToRgb(hexB);
+  return `rgb(${Math.round(a.r+(b.r-a.r)*t)},${Math.round(a.g+(b.g-a.g)*t)},${Math.round(a.b+(b.b-a.b)*t)})`;
+}
+function unrealSkinColor(phase){
+  const n = UNREAL_SKIN_PALETTE.length;
+  const scaled = (((phase%1)+1)%1) * n;
+  const i = Math.floor(scaled);
+  return lerpHexColor(UNREAL_SKIN_PALETTE[i], UNREAL_SKIN_PALETTE[(i+1)%n], scaled-i);
+}
 function rankSkinGradient(cx,cy,r){
-  const hue = (time/1000*22)%360;
+  const phase = (time/1000*0.12)%1;
   const grad = ctx.createLinearGradient(cx-r*0.6,cy-r*0.6,cx+r*0.6,cy+r*0.7);
-  grad.addColorStop(0, `hsl(${hue},95%,80%)`);
-  grad.addColorStop(0.35, `hsl(${(hue+70)%360},92%,64%)`);
-  grad.addColorStop(0.7, `hsl(${(hue+160)%360},90%,56%)`);
-  grad.addColorStop(1, `hsl(${(hue+230)%360},92%,58%)`);
+  grad.addColorStop(0, unrealSkinColor(phase));
+  grad.addColorStop(0.35, unrealSkinColor(phase+0.2));
+  grad.addColorStop(0.7, unrealSkinColor(phase+0.4));
+  grad.addColorStop(1, unrealSkinColor(phase+0.6));
   return grad;
 }
 // Paints the body-circle fill (and a matching glow) for a rank-reward skin instead of the
@@ -2942,7 +2959,7 @@ function applyRankSkinFill(tierId, cx, cy, r){
   if(!id) return false;
   if(tierId==='unreal'){
     ctx.fillStyle = rankSkinGradient(cx,cy,r);
-    ctx.shadowColor = `hsl(${(time/1000*22)%360},95%,65%)`;
+    ctx.shadowColor = unrealSkinColor((time/1000*0.12)%1);
   } else {
     const grad = ctx.createLinearGradient(cx-r*0.6,cy-r*0.6,cx+r*0.6,cy+r*0.7);
     id.gradient.forEach(([o,c])=>grad.addColorStop(o,c));
