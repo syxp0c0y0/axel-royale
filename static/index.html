@@ -2434,6 +2434,9 @@ const DEV_CHEAT_CODE = 'nx7quartz419'; // compared with punctuation/spacing/case
 // high-rank bot difficulty/UI without grinding. Typed as the prefix followed directly by
 // a tier id (spaces/punctuation are stripped first) — e.g. "nx7rank diamond".
 const DEV_RANK_PREFIX = 'nx7rank';
+// Third dev-only code: sets your coin balance to any exact amount, for testing the shop/
+// Premium Pass purchase without grinding eliminations. e.g. "nx7coins 5000".
+const DEV_COINS_PREFIX = 'nx7coins';
 const miniChatInput = document.getElementById('miniChatInput');
 const miniChatForm = document.getElementById('miniChatRow');
 function normalizeCode(s){ return (s||'').toLowerCase().replace(/[^a-z0-9]/g,''); }
@@ -2463,6 +2466,18 @@ function trySubmitMiniChat(){
     if(!SUBVIEWS.customize.classList.contains('hidden')) renderCustomizeView();
     if(!SUBVIEWS.profile.classList.contains('hidden')) renderProfileView();
     showToast('DEV: RANGO AJUSTADO A '+tier.name.toUpperCase()+' 🏆');
+    return;
+  }
+  if(said.startsWith(DEV_COINS_PREFIX)){
+    const amount = parseInt(said.slice(DEV_COINS_PREFIX.length), 10);
+    if(!Number.isFinite(amount)) return;
+    profile.coins = Math.max(0, amount);
+    saveProfile();
+    refreshTopNavSummary();
+    if(!SUBVIEWS.shop.classList.contains('hidden')) renderShopView();
+    if(!SUBVIEWS.profile.classList.contains('hidden')) renderProfileView();
+    if(!SUBVIEWS.battlepass.classList.contains('hidden')) renderBattlePassView();
+    showToast('DEV: MONEDAS AJUSTADAS A '+profile.coins+' 🪙');
     return;
   }
 }
