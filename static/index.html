@@ -1594,44 +1594,50 @@ ensureChallenges();
 // modified by this module.
 const PREMIUM_PASS_PRICE = 750; // between a legendary (800) and epic (550) shop item —
 // a real, considered purchase, not a rushable one, not a wall either.
-const BATTLE_PASS_MAX_LEVEL = 30;
+const BATTLE_PASS_MAX_LEVEL = 100;
 const KILL_XP = 15;
 const MATCH_PLAYED_XP = 30;
 const MATCH_WIN_XP = 50;
 // XP needed to advance FROM (n-1) TO n — a gentle, steady ramp so early levels come
-// quickly (rewarding) while the back half of the pass takes real sustained play.
+// quickly (rewarding) while the back half of the pass takes real sustained play. Unchanged
+// from the original 30-level pass (same per-level cost), just carried out to level 100 —
+// early-game pacing feels exactly as it always did.
 function xpForLevel(n){ return 300 + (n-1)*40; }
-// {level: reward} — level 0 has no reward (that's "not started yet"). Every cosmetic id
-// here must exist in PASS_HATS/PASS_COLORS above; nothing appears twice across both lanes.
-const BATTLE_PASS_FREE = {
-  1:{type:'coins',amount:20}, 2:{type:'coins',amount:20}, 3:{type:'coins',amount:25}, 4:{type:'coins',amount:25},
-  5:{type:'cosmetic',id:'hat_visor'},
-  6:{type:'coins',amount:25}, 7:{type:'coins',amount:30}, 8:{type:'coins',amount:30}, 9:{type:'coins',amount:30},
-  10:{type:'cosmetic',id:'color_teal'},
-  11:{type:'coins',amount:35}, 12:{type:'coins',amount:35}, 13:{type:'coins',amount:35}, 14:{type:'coins',amount:40},
-  15:{type:'cosmetic',id:'hat_bucket'},
-  16:{type:'coins',amount:40}, 17:{type:'coins',amount:40}, 18:{type:'coins',amount:45}, 19:{type:'coins',amount:45},
-  20:{type:'cosmetic',id:'hat_bandana'},
-  21:{type:'coins',amount:45}, 22:{type:'coins',amount:50}, 23:{type:'coins',amount:50}, 24:{type:'coins',amount:50},
-  25:{type:'cosmetic',id:'color_orange'},
-  26:{type:'coins',amount:55}, 27:{type:'coins',amount:55}, 28:{type:'coins',amount:60}, 29:{type:'coins',amount:60},
-  30:{type:'cosmetic',id:'hat_pirate'},
+// Milestone cosmetic placements — level -> cosmetic id, for each lane. Every other level in
+// that lane gets a scaled coin reward instead (see battlePassCoinAmount). Rarity escalates
+// with level per the request: commons/uncommons early, rares through the mid-game, epics
+// around 55-80, and legendaries reserved for the 85+ endgame — each lane gets its own
+// level-100 capstone (a weapon-body color for the free track, the Cresta de Dragón hat —
+// the single most visually striking piece here — for Premium).
+const BATTLE_PASS_FREE_MILESTONES = {
+  10:'hat_visor', 20:'color_sand', 30:'hat_bucket', 40:'hat_bandana', 50:'hat_headband',
+  60:'color_teal', 70:'hat_pirate', 80:'color_orange', 90:'wskin_camo', 100:'color_fuchsia',
 };
-const BATTLE_PASS_PREMIUM = {
-  1:{type:'cosmetic',id:'hat_headphones'}, 2:{type:'coins',amount:30},
-  3:{type:'cosmetic',id:'color_lime'},     4:{type:'coins',amount:35},
-  5:{type:'cosmetic',id:'hat_ninja'},      6:{type:'coins',amount:40},
-  7:{type:'cosmetic',id:'color_icecyan'},  8:{type:'coins',amount:40}, 9:{type:'coins',amount:45},
-  10:{type:'cosmetic',id:'hat_viking'},
-  11:{type:'coins',amount:45}, 12:{type:'coins',amount:50}, 13:{type:'coins',amount:50}, 14:{type:'coins',amount:55},
-  15:{type:'cosmetic',id:'hat_wizard'},
-  16:{type:'coins',amount:55}, 17:{type:'coins',amount:60}, 18:{type:'coins',amount:60}, 19:{type:'coins',amount:65},
-  20:{type:'cosmetic',id:'hat_mohawk'},
-  21:{type:'coins',amount:65}, 22:{type:'coins',amount:70}, 23:{type:'coins',amount:70}, 24:{type:'coins',amount:75},
-  25:{type:'coins',amount:75}, 26:{type:'coins',amount:80}, 27:{type:'coins',amount:80}, 28:{type:'coins',amount:85},
-  29:{type:'coins',amount:85},
-  30:{type:'cosmetic',id:'hat_dragon'},
+const BATTLE_PASS_PREMIUM_MILESTONES = {
+  5:'hat_headphones', 10:'color_lime', 15:'color_mint', 20:'hat_ninja', 25:'hat_viking',
+  30:'hat_astronaut', 35:'hat_samurai', 40:'color_icecyan', 45:'color_magenta', 50:'wskin_toxic',
+  55:'hat_wizard', 60:'hat_mohawk', 65:'hat_robot', 70:'color_midnight', 75:'wskin_carbon',
+  80:'wskin_neon', 85:'hat_phoenix', 90:'wskin_dragon', 95:'wskin_holo', 100:'hat_dragon',
 };
+// Premium always pays a little more than free at the same level, on top of its much denser
+// cosmetic milestones (every 5 levels vs. every 10) — the coin curve alone is a small part
+// of Premium's value, not the point of it.
+function battlePassCoinAmount(level, lane){
+  const base = lane==='premium'? 25 : 15;
+  const perLevel = lane==='premium'? 0.65 : 0.45;
+  return base + Math.round(level*perLevel);
+}
+function buildBattlePassTrack(milestones, lane){
+  const track = {};
+  for(let lvl=1; lvl<=BATTLE_PASS_MAX_LEVEL; lvl++){
+    track[lvl] = milestones[lvl]
+      ? {type:'cosmetic', id:milestones[lvl]}
+      : {type:'coins', amount:battlePassCoinAmount(lvl, lane)};
+  }
+  return track;
+}
+const BATTLE_PASS_FREE = buildBattlePassTrack(BATTLE_PASS_FREE_MILESTONES, 'free');
+const BATTLE_PASS_PREMIUM = buildBattlePassTrack(BATTLE_PASS_PREMIUM_MILESTONES, 'premium');
 // Reverse lookup (cosmetic id -> where it lives in the track) so a locked cosmetic card in
 // Locker/Item Shop can tell the player exactly how to get it, instead of a bare 🔒.
 const PASS_REWARD_LOCATION = {};
