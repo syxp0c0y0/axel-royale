@@ -1949,6 +1949,27 @@ function resetMatch(diffKey){
 // Several distinct cover layouts — one is picked at random each match so games
 // don't all look identical. Ranked matches lay down extra scattered cover on
 // top of the base layout since they host far more fighters at once.
+// Small generators for the newer layouts below — plain [cx,cy] arrays like the
+// hand-authored ones above, just built programmatically since a hollow ring or a
+// staggered band of segments is tedious (and error-prone) to type out cell by cell.
+function rectRingCells(cx0, cy0, halfW, halfH, gapAxis){
+  // gapAxis 'ns' leaves a 1-cell doorway in the middle of the north/south walls, forcing
+  // approach from those two sides while the east/west walls stay fully solid.
+  const cells = [];
+  for(let dx=-halfW; dx<=halfW; dx++){
+    if(gapAxis==='ns' && dx===0) continue;
+    cells.push([cx0+dx, cy0-halfH]); cells.push([cx0+dx, cy0+halfH]);
+  }
+  for(let dy=-halfH+1; dy<=halfH-1; dy++){
+    cells.push([cx0-halfW, cy0+dy]); cells.push([cx0+halfW, cy0+dy]);
+  }
+  return cells;
+}
+function mazeRow(cy, offset, count, spacing){
+  const cells = [];
+  for(let i=0;i<count;i++){ const cx = offset+i*spacing; cells.push([cx,cy]); cells.push([cx+1,cy]); }
+  return cells;
+}
 const MAP_LAYOUTS = {
   clasico: [
     [12,8],[12,9],[13,8],[13,9],
@@ -1977,9 +1998,48 @@ const MAP_LAYOUTS = {
     [Math.floor(COLS/2)-1,Math.floor(ROWS/2)],[Math.floor(COLS/2),Math.floor(ROWS/2)],
     [18,17],[19,17],[COLS-19,17],[COLS-20,17],
   ],
+  // Fortaleza: a hollow fortress ring dead-center, entered only from the north or south —
+  // whoever holds the inside controls tight, enclosed combat, while the open ground
+  // around the ring plays as long sightlines. A real change of pace from every layout
+  // above (none of which has a single enclosed structure like this).
+  fortaleza: [
+    ...rectRingCells(Math.floor(COLS/2), Math.floor(ROWS/2), 5, 3, 'ns'),
+    [7,6],[8,6],[7,7],
+    [COLS-8,6],[COLS-9,6],[COLS-8,7],
+    [7,ROWS-7],[8,ROWS-7],[7,ROWS-8],
+    [COLS-8,ROWS-7],[COLS-9,ROWS-7],[COLS-8,ROWS-8],
+  ],
+  // Laberinto: four staggered bands of short wall segments running most of the map's
+  // width, offset against each other so there's no straight lane in any direction —
+  // constant close-range weaving instead of the open lanes/corners every other layout has.
+  laberinto: [
+    ...mazeRow(9, 6, 7, 6),
+    ...mazeRow(14, 9, 7, 6),
+    ...mazeRow(19, 6, 7, 6),
+    ...mazeRow(24, 9, 7, 6),
+  ],
+  // Centro: a deliberately open (not enclosed) contestable cluster at dead-center, with
+  // four staged approach-lane clusters converging on it from N/S/E/W — a control-point
+  // feel, distinct from Fortaleza's sealed ring and Cruce's crossing corridors.
+  centro: [
+    [Math.floor(COLS/2)-2,Math.floor(ROWS/2)-1],[Math.floor(COLS/2)+1,Math.floor(ROWS/2)-1],
+    [Math.floor(COLS/2)-2,Math.floor(ROWS/2)+1],[Math.floor(COLS/2)+1,Math.floor(ROWS/2)+1],
+    [Math.floor(COLS/2)-1,Math.floor(ROWS/2)-2],[Math.floor(COLS/2),Math.floor(ROWS/2)-2],
+    [Math.floor(COLS/2)-1,Math.floor(ROWS/2)+2],[Math.floor(COLS/2),Math.floor(ROWS/2)+2],
+    [Math.floor(COLS/2)-1,8],[Math.floor(COLS/2),8],
+    [Math.floor(COLS/2)-1,ROWS-9],[Math.floor(COLS/2),ROWS-9],
+    [12,Math.floor(ROWS/2)-1],[12,Math.floor(ROWS/2)],
+    [COLS-13,Math.floor(ROWS/2)-1],[COLS-13,Math.floor(ROWS/2)],
+  ],
 };
-const MAP_NAMES = {clasico:'Clásico', cruce:'Cruce', islas:'Islas'};
+const MAP_NAMES = {
+  clasico:'Clásico', cruce:'Cruce', islas:'Islas',
+  fortaleza:'Fortaleza', laberinto:'Laberinto', centro:'Centro',
+};
 let currentMapKey = 'clasico';
+// Avoid the same layout landing twice in a row when others are available — a light
+// re-roll, not a full shuffle-bag, so the pick stays genuinely random otherwise.
+let lastMapKey = null;
 
 function placeCrate(cx,cy){
   const k = cellKey(cx,cy);
@@ -2005,7 +2065,17 @@ function placeHouseRing(cx0, cy0){
 
 function buildBoundaryWalls(mapKey, extraCover){
   const keys = Object.keys(MAP_LAYOUTS);
-  currentMapKey = MAP_LAYOUTS[mapKey]? mapKey : keys[Math.floor(matchRng()*keys.length)];
+  let picked = MAP_LAYOUTS[mapKey]? mapKey : keys[Math.floor(matchRng()*keys.length)];
+  // Avoid an immediate repeat — but ONLY for matches whose matchRng() isn't a seeded
+  // stream that every peer must consume identically (online/ranked-with-friends,
+  // spectating). lastMapKey is purely local per-browser state, so re-rolling with it
+  // for a networked match could make one peer call matchRng() one more time than
+  // another and desync every draw made after it (spawns, terrain, team anchors...).
+  if(!MAP_LAYOUTS[mapKey] && keys.length>1 && picked===lastMapKey && mode!=='online' && mode!=='spectate'){
+    picked = keys[Math.floor(matchRng()*keys.length)];
+  }
+  currentMapKey = picked;
+  if(mode!=='online' && mode!=='spectate') lastMapKey = currentMapKey;
   MAP_LAYOUTS[currentMapKey].forEach(([cx,cy])=>{ if(cx!=null&&cy!=null) placeCrate(cx,cy); });
   if(extraCover){
     // extra scattered clusters spread across the map for a richer battle-royale field
