@@ -2298,7 +2298,9 @@ document.getElementById('rankedResultsMenuBtn').addEventListener('click', ()=>{
   running = false;
   document.getElementById('rankedResultsScreen').classList.add('hidden');
   document.getElementById('startScreen').classList.remove('hidden');
-  showSubview('ranked');
+  // Back to the Lobby (not the Ranked sub-screen) so the updated badge/progress/coins from
+  // the match just played are the first thing shown — matches the Lobby's own JUGAR flow.
+  showSubview('top');
 });
 
 function togglePause(){
