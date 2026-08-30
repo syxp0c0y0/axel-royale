@@ -996,6 +996,7 @@ function makeFighter(isBot){
     speed: 220,
     aiState:'approach', aiNextDecision:0, aiTargetCell:null, aiTarget:null,
     _moveDir:null, _wantFire:false, _aimNoise:0, _consumeDecision:null,
+    flankBias:(Math.random()-0.5)*1.3, _stuckTicks:0, _lastDecisionPos:null,
     netTarget:null,
   };
 }
@@ -2550,16 +2551,19 @@ function applyRankedMatchEnd(placement){
 // in ms, frac: safe-zone radius as a fraction of the base radius} checkpoints — the radius
 // interpolates smoothly between consecutive checkpoints; dps (damage/sec to whoever's
 // outside) only changes at the START of each shrink, matching how real BR storms feel.
+// Compressed to actually matter for how fast local bot-vs-bot Battle Royale matches
+// resolve — the original 22s grace + slow shrink meant most matches ended before the
+// zone ever restricted a meaningful area, which read as "the zone doesn't do anything".
 const ZONE_PHASES = [
   {t:0,      frac:1.00, dps:0},
-  {t:22000,  frac:1.00, dps:0},
-  {t:52000,  frac:0.60, dps:2},
-  {t:82000,  frac:0.60, dps:2},
-  {t:112000, frac:0.35, dps:4},
-  {t:142000, frac:0.35, dps:4},
-  {t:172000, frac:0.16, dps:7},
-  {t:202000, frac:0.16, dps:7},
-  {t:232000, frac:0.0,  dps:12},
+  {t:10000,  frac:1.00, dps:0},
+  {t:24000,  frac:0.55, dps:3},
+  {t:36000,  frac:0.55, dps:3},
+  {t:50000,  frac:0.30, dps:6},
+  {t:62000,  frac:0.30, dps:6},
+  {t:76000,  frac:0.12, dps:10},
+  {t:88000,  frac:0.12, dps:10},
+  {t:102000, frac:0.0,  dps:16},
 ];
 let rankedZone = null; // {cx, cy, baseR, radius, dps, nextT, shrinking}
 function initRankedZone(){
@@ -2568,7 +2572,7 @@ function initRankedZone(){
   rankedZone = {
     cx: marginX + matchRng()*(WORLD_W-marginX*2),
     cy: marginY + matchRng()*(WORLD_H-marginY*2),
-    baseR, radius: baseR, dps:0, nextT: ZONE_PHASES[1].t, shrinking:false,
+    baseR, radius: baseR, nextRadius: baseR*ZONE_PHASES[2].frac, dps:0, nextT: ZONE_PHASES[1].t, shrinking:false,
   };
 }
 function zonePhaseAt(t){
@@ -2576,11 +2580,14 @@ function zonePhaseAt(t){
     const a=ZONE_PHASES[i], b=ZONE_PHASES[i+1];
     if(t>=a.t && t<b.t){
       const p = (t-a.t)/(b.t-a.t);
-      return {frac: a.frac+(b.frac-a.frac)*p, dps:a.dps, nextT:b.t, shrinking:a.frac!==b.frac};
+      // While holding at a.frac===b.frac, "next zone" means the shrink AFTER this wait —
+      // otherwise it's simply the target this segment is already shrinking toward.
+      const upcoming = (a.frac===b.frac && ZONE_PHASES[i+2]) ? ZONE_PHASES[i+2].frac : b.frac;
+      return {frac: a.frac+(b.frac-a.frac)*p, nextFrac:upcoming, dps:a.dps, nextT:b.t, shrinking:a.frac!==b.frac};
     }
   }
   const last = ZONE_PHASES[ZONE_PHASES.length-1];
-  return {frac:last.frac, dps:last.dps, nextT:last.t, shrinking:false};
+  return {frac:last.frac, nextFrac:last.frac, dps:last.dps, nextT:last.t, shrinking:false};
 }
 // Environmental damage has no attacker — reuses the same ranked-death routing as combat
 // (handleRankedDeath) so placement/elimination bookkeeping stays correct either way.
@@ -2597,6 +2604,7 @@ function updateRankedZone(dt){
   if(!isAnyRankedMatch() || !rankedZone) return;
   const ph = zonePhaseAt(time);
   rankedZone.radius = rankedZone.baseR*ph.frac;
+  rankedZone.nextRadius = rankedZone.baseR*ph.nextFrac;
   rankedZone.dps = ph.dps;
   rankedZone.nextT = ph.nextT;
   rankedZone.shrinking = ph.shrinking;
@@ -2627,6 +2635,15 @@ function drawZone(){
   ctx.shadowColor = 'rgba(200,80,255,0.6)'; ctx.shadowBlur = 10;
   ctx.beginPath(); ctx.arc(cx, cy, radius, 0, Math.PI*2); ctx.stroke();
   ctx.restore();
+  // Next-zone preview: a thin dashed ring showing where the storm is shrinking to next,
+  // so players (and bots, conceptually) can plan a route before the current ring even moves.
+  if(rankedZone.shrinking && rankedZone.nextRadius < radius - 0.5){
+    ctx.save();
+    ctx.setLineDash([14, 10]);
+    ctx.strokeStyle = 'rgba(255,255,255,0.65)'; ctx.lineWidth = 2.5;
+    ctx.beginPath(); ctx.arc(cx, cy, rankedZone.nextRadius, 0, Math.PI*2); ctx.stroke();
+    ctx.restore();
+  }
 }
 
 // ============================== MINIMAP ==============================
@@ -2653,6 +2670,15 @@ function drawMinimap(){
   solids.forEach(p=>{ mctx.fillRect(p.cx*CELL*sx, p.cy*CELL*sy, Math.max(1.5,CELL*sx), Math.max(1.5,CELL*sy)); });
   // Ranked zone (storm) boundary, same data drawMinimap's big-map counterpart uses.
   if(isAnyRankedMatch() && rankedZone){
+    // Next zone preview: a dashed, dimmer circle showing where the storm is about to shrink
+    // to, drawn first so the solid current-zone ring sits visually on top of it.
+    if(rankedZone.shrinking && rankedZone.nextRadius < rankedZone.radius - 0.5){
+      mctx.save();
+      mctx.setLineDash([2.5, 2]);
+      mctx.strokeStyle = 'rgba(255,255,255,0.55)'; mctx.lineWidth = 1;
+      mctx.beginPath(); mctx.ellipse(rankedZone.cx*sx, rankedZone.cy*sy, rankedZone.nextRadius*sx, rankedZone.nextRadius*sy, 0, 0, Math.PI*2); mctx.stroke();
+      mctx.restore();
+    }
     mctx.strokeStyle = 'rgba(230,140,255,0.9)'; mctx.lineWidth = 1.4;
     mctx.beginPath(); mctx.ellipse(rankedZone.cx*sx, rankedZone.cy*sy, rankedZone.radius*sx, rankedZone.radius*sy, 0, 0, Math.PI*2); mctx.stroke();
   }
@@ -2862,6 +2888,13 @@ function nearestActivePickupFor(self, maxRange){
   return best;
 }
 
+// How far outside the ranked zone this fighter currently is (negative = safely inside).
+// Used by bots to know when surviving the storm should outrank fighting or looting.
+function distanceOutsideZone(f){
+  if(!rankedZone) return -1;
+  return Math.hypot(f.x-rankedZone.cx, f.y-rankedZone.cy) - rankedZone.radius;
+}
+
 function botThink(self, dt){
   if(!self.alive || !self.isBot) return;
   if(mode==='practice' || mode==='spectate' || (mode==='online' && !onlineIsHost())) return;
@@ -2870,13 +2903,25 @@ function botThink(self, dt){
   if(time < self.aiNextDecision) return;
   self.aiNextDecision = time + diff.reaction;
 
+  // Zone awareness comes before anything else: a bot standing in the storm is losing the
+  // match regardless of how a fight is going, so being outside overrides looting/wandering
+  // outright, and overrides even an active fight once it's actually costing real hp.
+  const outsideBy = isAnyRankedMatch() ? distanceOutsideZone(self) : -1;
+  const zoneHurts = outsideBy>0 && rankedZone && rankedZone.dps>0;
+
   const target = nearestEnemyOf(self);
   self.aiTarget = target;
   if(!target){
-    self.aiState='wander'; self._wantFire=false;
-    const loot = nearestActivePickupFor(self, 1400);
-    if(loot){ self._moveDir = Math.atan2(loot.y-self.y, loot.x-self.x); }
-    else if(time>=(self.aiNextWander||0)){ self._moveDir = Math.random()*Math.PI*2; self.aiNextWander = time+1200+Math.random()*1200; }
+    if(zoneHurts){
+      self.aiState='zoneRush'; self._wantFire=false;
+      self._moveDir = Math.atan2(rankedZone.cy-self.y, rankedZone.cx-self.x);
+    } else {
+      self.aiState='wander'; self._wantFire=false;
+      const loot = nearestActivePickupFor(self, 1400);
+      if(loot){ self._moveDir = Math.atan2(loot.y-self.y, loot.x-self.x); }
+      else if(time>=(self.aiNextWander||0)){ self._moveDir = Math.random()*Math.PI*2; self.aiNextWander = time+1200+Math.random()*1200; }
+    }
+    detectStuck(self);
     return;
   }
 
@@ -2895,13 +2940,24 @@ function botThink(self, dt){
     self._consumeDecision = 'shield';
   }
 
+  // Getting shot recently makes ducking to cover feel reactive instead of purely a fixed
+  // hp threshold — sharper bots (higher aim) also react to incoming fire more decisively.
+  const recentlyHit = (time-self.lastHitTime) < 550;
   const fleeHp = diff.fleeHp!=null? diff.fleeHp : 35;
-  if(self.hp < fleeHp && Math.random()<diff.buildChance+0.2){
+  const wantsCover = self.hp<fleeHp || (recentlyHit && self.hp<70 && Math.random()<diff.aim);
+
+  // Being outside a storm that's actually hurting takes priority over pressing a fight —
+  // "abandonar la pelea y sobrevivir" — but only once it's a real cost (>120px out, or hp
+  // already suffering); a bot barely outside the line doesn't panic over one graze of damage.
+  if(zoneHurts && (outsideBy>120 || self.hp<50)){
+    self.aiState = 'zoneRush';
+  } else if(wantsCover && Math.random()<diff.buildChance+0.2){
     self.aiState = 'cover'; // better ranks flee/wall-off more decisively at low hp
   } else if(self._consumeDecision){
     self.aiState = 'heal';
   } else if(hasLOS && dist<diff.engageRange){
-    self.aiState = Math.random()<0.35? 'strafe':'engage';
+    // Higher-skill bots stay in motion more often instead of trading shots standing still.
+    self.aiState = Math.random()<0.42+diff.aim*0.25 ? 'strafe':'engage';
   } else {
     self.aiState = 'approach';
   }
@@ -2920,16 +2976,30 @@ function botThink(self, dt){
 
   // Loot toward a nearby consumable when there's no pressing fight to run to.
   const loot = (self.aiState==='approach' || self.aiState==='wander') ? nearestActivePickupFor(self, diff.engageRange) : null;
+  // A light flanking arc while closing distance instead of a dead-straight beeline — fades
+  // out near point-blank range so the final approach still commits directly at the target.
+  const flankAngle = Math.atan2(ddy,ddx) + self.flankBias*Math.min(1, Math.max(0,(dist-150)/500));
 
-  self._moveDir = self.aiState==='heal'? Math.atan2(ddy,ddx)+Math.PI :
+  self._moveDir = self.aiState==='zoneRush'? Math.atan2(rankedZone.cy-self.y, rankedZone.cx-self.x) :
+                  self.aiState==='heal'? Math.atan2(ddy,ddx)+Math.PI :
                   self.aiState==='cover'? Math.atan2(ddy,ddx)+Math.PI : // actively flee while walling off
                   loot? Math.atan2(loot.y-self.y, loot.x-self.x) :
-                  self.aiState==='approach'? Math.atan2(ddy,ddx) :
+                  self.aiState==='approach'? flankAngle :
                   self.aiState==='engage'? Math.atan2(ddy,ddx) :
                   Math.atan2(ddy,ddx) + Math.PI/2*(Math.random()<0.5?1:-1);
   self._wantFire = self.aiState!=='heal' && hasLOS && dist < (WEAPONS[self.weaponIdx].range) && Math.random()<diff.fireChance;
   if(dist<300) self.weaponIdx = 1; else if(dist<700) self.weaponIdx = Math.random()<0.5?3:2; else self.weaponIdx=4;
   self._aimNoise = (Math.random()-0.5)*2*(1-diff.aim)*0.5;
+  detectStuck(self);
+}
+// If a bot hasn't actually moved much since its last decision despite intending to (stuck
+// on a corner, jammed against cover, etc.), force a fresh random heading for one cycle
+// instead of quietly pushing into the same wall forever.
+function detectStuck(self){
+  const moved = self._lastDecisionPos? Math.hypot(self.x-self._lastDecisionPos.x, self.y-self._lastDecisionPos.y) : 999;
+  self._stuckTicks = (moved<10 && self.aiState!=='heal' && self._moveDir!=null) ? (self._stuckTicks||0)+1 : 0;
+  self._lastDecisionPos = {x:self.x, y:self.y};
+  if(self._stuckTicks>=3){ self._moveDir = Math.random()*Math.PI*2; self._stuckTicks=0; }
 }
 
 function botAct(self, dt){
@@ -2958,7 +3028,7 @@ function botAct(self, dt){
       let mdx=0,mdy=0;
       if(self._moveDir!=null){
         mdx = Math.cos(self._moveDir); mdy = Math.sin(self._moveDir);
-        if(dist<180 && self.aiState!=='cover' && self.aiState!=='heal'){ mdx=-Math.cos(targetAngle); mdy=-Math.sin(targetAngle); }
+        if(dist<180 && self.aiState!=='cover' && self.aiState!=='heal' && self.aiState!=='zoneRush'){ mdx=-Math.cos(targetAngle); mdy=-Math.sin(targetAngle); }
       }
       const spd = self.speed*dt;
       const [nx,ny] = resolveMovement(self, self.x+mdx*spd, self.y+mdy*spd);
