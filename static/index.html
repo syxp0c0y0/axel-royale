@@ -281,6 +281,74 @@ h1.title{
 }
 .chal-claim-btn.ready:hover{filter:brightness(1.08);}
 .chal-claim-btn.done{border-color:var(--line); color:var(--muted); background:var(--surface2);}
+
+/* ---------- persistent top bar (Lobby / Locker / Item Shop / Profile) ---------- */
+.main-topbar{
+  display:flex; gap:6px; background:var(--surface); border:1px solid var(--line); border-radius:10px;
+  padding:5px; margin-bottom:18px; position:sticky; top:0; z-index:3;
+}
+.topbar-btn{
+  flex:1; font-family:'Rajdhani'; font-weight:700; font-size:13px; letter-spacing:.04em;
+  background:transparent; border:none; border-radius:7px; color:var(--muted); padding:10px 4px;
+  cursor:pointer; transition:background .15s, color .15s;
+}
+.topbar-btn:hover{color:var(--ink);}
+.topbar-btn.active{background:var(--surface2); color:var(--ink); box-shadow:inset 0 0 0 1px var(--line);}
+
+/* ---------- Lobby hub ---------- */
+#lobbyStage{
+  position:relative; border-radius:14px; padding:22px 16px 18px; margin-bottom:16px; overflow:hidden;
+  display:flex; flex-direction:column; align-items:center; gap:10px;
+  background:
+    radial-gradient(circle at 50% 15%, var(--lobby-accent,var(--build)) 0%, transparent 55%),
+    linear-gradient(180deg, var(--surface2), var(--surface) 70%);
+  background-size:200% 200%, 100% 100%;
+  animation:lobbyBgDrift 14s ease-in-out infinite;
+  border:1px solid var(--line);
+}
+@keyframes lobbyBgDrift{
+  0%,100%{background-position:50% 10%, 0 0;}
+  50%{background-position:50% 35%, 0 0;}
+}
+#lobbyPreview{
+  display:block; width:150px; height:150px; filter:drop-shadow(0 10px 18px rgba(0,0,0,0.45));
+}
+#lobbyIdentity{display:flex; flex-direction:column; align-items:center; gap:6px;}
+#lobbyNameLine{font-family:'Rajdhani'; font-weight:700; font-size:19px; color:var(--ink);}
+#lobbyRankRow{display:flex; align-items:center; gap:8px;}
+#lobbyRankRow .rk-badge{width:26px; height:26px;}
+#lobbyRankName{font-family:'Rajdhani'; font-weight:700; font-size:13px; letter-spacing:.04em;}
+#lobbyPartyRow{display:flex; gap:8px; margin-top:4px;}
+.lobby-party-slot{
+  font-family:'Rajdhani'; font-weight:700; font-size:11px; letter-spacing:.03em; text-align:center;
+  border:1px dashed var(--line); border-radius:8px; padding:8px 14px; color:var(--muted); min-width:64px;
+}
+.lobby-party-you{border-style:solid; border-color:var(--build); color:var(--ink); background:rgba(79,209,197,0.1);}
+.lobby-party-empty .d{display:block; font-family:'Inter'; font-weight:400; font-size:9px; margin-top:2px; text-transform:none; letter-spacing:0;}
+#lobbyModeCard{
+  display:flex; align-items:center; gap:12px; background:var(--surface); border:1px solid var(--line);
+  border-radius:10px; padding:14px 16px; margin-bottom:14px;
+}
+#lobbyModeInfo{flex:1; text-align:left;}
+#lobbyModeName{font-family:'Rajdhani'; font-weight:700; font-size:17px;}
+#lobbyChangeModeBtn{width:auto; white-space:nowrap; padding:9px 14px; font-size:12px;}
+
+/* ---------- mode-select modal ---------- */
+.modal-overlay{z-index:30; background:rgba(6,8,13,0.72); backdrop-filter:blur(2px);}
+.modal-panel{width:min(480px,92vw); padding:32px 28px;}
+.modal-title{
+  font-family:'Rajdhani'; font-weight:700; font-size:28px; margin:0 0 18px; letter-spacing:.02em;
+}
+.mode-select-grid{display:grid; grid-template-columns:repeat(3,1fr); gap:10px; margin-bottom:20px;}
+.mode-select-card{
+  background:var(--surface); border:2px solid var(--line); border-radius:10px; padding:14px 8px;
+  cursor:pointer; transition:border-color .15s, transform .1s;
+}
+.mode-select-card:hover{transform:translateY(-2px);}
+.mode-select-card.selected{border-color:var(--build); background:var(--surface2); box-shadow:0 0 0 1px var(--build);}
+.msc-title{font-family:'Rajdhani'; font-weight:700; font-size:16px; margin-bottom:6px;}
+.msc-desc{font-family:'Inter'; font-size:11px; color:var(--muted); line-height:1.3;}
+.modal-btn-row{display:flex; gap:10px; justify-content:center;}
 .cosmetic-card{
   background:var(--surface); border:2px solid var(--line); border-radius:10px; padding:10px 8px;
   display:flex; flex-direction:column; align-items:center; gap:6px; cursor:pointer; position:relative;
@@ -549,25 +617,55 @@ h1.title{
     <h1 class="title">AXEL'S ROYALE</h1>
 
     <div id="topNavView">
-      <p class="sub">Levanta muros al instante, tiende rampas, cierra el paso con conos. Sobrevive, gana monedas, personaliza tu personaje.</p>
+      <div class="main-topbar">
+        <button class="topbar-btn nav-btn" data-nav="top">LOBBY</button>
+        <button class="topbar-btn nav-btn" data-nav="customize">LOCKER</button>
+        <button class="topbar-btn nav-btn" data-nav="shop">ITEM SHOP</button>
+        <button class="topbar-btn nav-btn" data-nav="profile">PROFILE</button>
+      </div>
+
+      <div id="lobbyStage">
+        <canvas id="lobbyPreview" width="180" height="180"></canvas>
+        <div id="lobbyIdentity">
+          <div id="lobbyNameLine"></div>
+          <div id="lobbyRankRow">
+            <div class="rk-badge" id="lobbyRankBadge"></div>
+            <span id="lobbyRankName"></span>
+          </div>
+        </div>
+        <div id="lobbyPartyRow">
+          <div class="lobby-party-slot lobby-party-you" id="lobbyPartyYou">TÚ</div>
+          <div class="lobby-party-slot lobby-party-empty">+ AMIGOS<span class="d">Próximamente</span></div>
+        </div>
+      </div>
+
+      <div id="lobbyModeCard">
+        <div id="lobbyModeInfo">
+          <div class="cust-section-label" style="margin:0 0 4px;">MODO SELECCIONADO</div>
+          <div id="lobbyModeName">Solo</div>
+          <div id="lobbyModeDesc" class="sub" style="margin:2px 0 0;"></div>
+        </div>
+        <button class="mode-btn" id="lobbyChangeModeBtn">CAMBIAR MODO</button>
+      </div>
+
+      <button class="mode-btn ranked-btn" id="lobbyPlayBtn" style="font-size:20px; margin-bottom:18px;">JUGAR</button>
+
       <div class="topnav-row">
         <div class="topnav-card"><span class="v" id="navCoins">0</span><span class="l">MONEDAS</span></div>
         <div class="topnav-card"><span class="v" id="navKills">0</span><span class="l">BAJAS</span></div>
         <div class="topnav-card"><span class="v" id="navWins">0</span><span class="l">VICTORIAS</span></div>
       </div>
-      <button class="mode-btn nav-btn ranked-btn" data-nav="ranked" id="rankedNavBtn">
-        <span id="rankedNavRankName">RANKED · BRONZE</span>
-        <span class="d">Battle Royale contra bots — Solo, Dúos o Tríos</span>
-      </button>
-      <button class="mode-btn nav-btn challenges-btn" data-nav="challenges" id="challengesNavBtn">
-        DESAFÍOS<span class="d">Misiones diarias y semanales</span>
-        <span id="challengesNavBadge" class="challenges-badge hidden">0</span>
-      </button>
-      <div class="modes four" id="topNavGrid">
-        <button class="mode-btn nav-btn" data-nav="play">JUGAR<span class="d">Elige un modo y entra a la arena</span></button>
-        <button class="mode-btn nav-btn" data-nav="customize">CUSTOMIZE<span class="d">Color y sombrero de tu personaje</span></button>
-        <button class="mode-btn nav-btn" data-nav="shop">ITEM SHOP<span class="d">Gasta tus monedas en cosméticos</span></button>
-        <button class="mode-btn nav-btn" data-nav="profile">PROFILE<span class="d">Tus estadísticas y colección</span></button>
+
+      <div class="cust-section-label">MÁS</div>
+      <div class="modes" style="grid-template-columns:repeat(3,1fr);">
+        <button class="mode-btn nav-btn challenges-btn" data-nav="challenges" id="challengesNavBtn">
+          DESAFÍOS<span class="d">Misiones</span>
+          <span id="challengesNavBadge" class="challenges-badge hidden">0</span>
+        </button>
+        <button class="mode-btn nav-btn" data-nav="ranked" id="rankedNavBtn">
+          <span id="rankedNavRankName">RANKED</span><span class="d">Amigos y leaderboard</span>
+        </button>
+        <button class="mode-btn nav-btn" data-nav="play">MODO CLÁSICO<span class="d">1v1 / 2v2 / Práctica</span></button>
       </div>
     </div>
 
@@ -632,7 +730,12 @@ h1.title{
     </div>
 
     <div id="customizeView" class="hidden">
-      <button class="mode-btn back-btn" data-nav="top">← VOLVER</button>
+      <div class="main-topbar">
+        <button class="topbar-btn nav-btn" data-nav="top">LOBBY</button>
+        <button class="topbar-btn nav-btn" data-nav="customize">LOCKER</button>
+        <button class="topbar-btn nav-btn" data-nav="shop">ITEM SHOP</button>
+        <button class="topbar-btn nav-btn" data-nav="profile">PROFILE</button>
+      </div>
       <div id="custPreviewWrap"><canvas id="custPreview" width="140" height="140"></canvas></div>
       <div id="nameFieldWrap">
         <label class="cust-section-label" for="nameInput" style="margin:0 0 6px;">TU NOMBRE</label>
@@ -647,13 +750,23 @@ h1.title{
     </div>
 
     <div id="shopView" class="hidden">
-      <button class="mode-btn back-btn" data-nav="top">← VOLVER</button>
+      <div class="main-topbar">
+        <button class="topbar-btn nav-btn" data-nav="top">LOBBY</button>
+        <button class="topbar-btn nav-btn" data-nav="customize">LOCKER</button>
+        <button class="topbar-btn nav-btn" data-nav="shop">ITEM SHOP</button>
+        <button class="topbar-btn nav-btn" data-nav="profile">PROFILE</button>
+      </div>
       <div class="shop-balance"><span id="shopCoins">0</span> MONEDAS</div>
       <div class="cosmetic-grid shop-grid" id="shopGrid"></div>
     </div>
 
     <div id="profileView" class="hidden">
-      <button class="mode-btn back-btn" data-nav="top">← VOLVER</button>
+      <div class="main-topbar">
+        <button class="topbar-btn nav-btn" data-nav="top">LOBBY</button>
+        <button class="topbar-btn nav-btn" data-nav="customize">LOCKER</button>
+        <button class="topbar-btn nav-btn" data-nav="shop">ITEM SHOP</button>
+        <button class="topbar-btn nav-btn" data-nav="profile">PROFILE</button>
+      </div>
       <div id="profileNameLine"></div>
       <div id="profileRankCard">
         <div class="rk-badge" id="profileRankBadge"></div>
@@ -715,6 +828,31 @@ h1.title{
       <input id="miniChatInput" maxlength="40" placeholder="Mensaje…" autocomplete="off">
       <button id="miniChatSend" type="submit" aria-label="Enviar">➤</button>
     </form>
+  </div>
+</div>
+
+<div class="overlay modal-overlay hidden" id="modeSelectModal">
+  <div class="panel modal-panel">
+    <div class="eyebrow">ELEGIR MODO</div>
+    <h2 class="modal-title">BATTLE ROYALE</h2>
+    <div class="mode-select-grid" id="modeSelectGrid">
+      <div class="mode-select-card" data-mode-select="rankedSolo">
+        <div class="msc-title">SOLO</div>
+        <div class="msc-desc">Tú contra 15 rivales individuales</div>
+      </div>
+      <div class="mode-select-card" data-mode-select="rankedDuos">
+        <div class="msc-title">DÚOS</div>
+        <div class="msc-desc">Tú + 1 aliado bot vs 7 equipos de 2</div>
+      </div>
+      <div class="mode-select-card" data-mode-select="rankedTrios">
+        <div class="msc-title">TRÍOS</div>
+        <div class="msc-desc">Tú + 2 aliados bot vs 5 equipos de 3</div>
+      </div>
+    </div>
+    <div class="modal-btn-row">
+      <button class="mode-btn" id="modeSelectCancelBtn" style="width:auto;">CANCELAR</button>
+      <button class="mode-btn ranked-btn" id="modeSelectConfirmBtn" style="width:auto;">CONFIRMAR</button>
+    </div>
   </div>
 </div>
 
@@ -979,6 +1117,7 @@ function defaultProfile(){
     stats:{kills:0, wins:0, matchesPlayed:0, damageDealt:0},
     ranked:{points:0, wins:0, kills:0, matches:0, bestPlacement:null},
     challenges:{daily:null, weekly:null},
+    selectedRankedMode:'rankedSolo',
   };
 }
 let profile = loadProfile();
@@ -1001,6 +1140,9 @@ function loadProfile(){
       // Daily/weekly sets themselves are validated/regenerated by ensureChallenges() right
       // after load — here we just carry forward whatever shape was saved, if any.
       challenges: (p.challenges && typeof p.challenges==='object') ? p.challenges : d.challenges,
+      // Checked against a literal list, not RANKED_MODE_CONFIG — that const is declared
+      // further down the file and loadProfile() runs immediately at script start.
+      selectedRankedMode: ['rankedSolo','rankedDuos','rankedTrios'].includes(p.selectedRankedMode)? p.selectedRankedMode : d.selectedRankedMode,
     };
   } catch(e){ return defaultProfile(); }
 }
@@ -1719,33 +1861,51 @@ function refreshTopNavSummary(){
   document.getElementById('challengesNavBadge').textContent = claimable;
   document.getElementById('challengesNavBadge').classList.toggle('hidden', claimable<=0);
 }
+// The 4 top-bar buttons (Lobby/Locker/Item Shop/Profile) are duplicated in every one of
+// those 4 view containers so the bar stays visible while any of them is open; keeping the
+// active-state highlight in sync just means toggling every instance's matching button.
+function updateTopbarActive(name){
+  document.querySelectorAll('.topbar-btn').forEach(btn=>{
+    btn.classList.toggle('active', btn.dataset.nav===name);
+  });
+}
 function showSubview(name){
   topNavView.classList.add('hidden');
   Object.values(SUBVIEWS).forEach(v=>v.classList.add('hidden'));
-  if(name==='top'){ topNavView.classList.remove('hidden'); refreshTopNavSummary(); return; }
+  if(name==='top'){
+    topNavView.classList.remove('hidden');
+    refreshTopNavSummary();
+    renderLobbyView();
+    updateTopbarActive('top');
+    ensurePreviewAnimating();
+    return;
+  }
   SUBVIEWS[name].classList.remove('hidden');
   if(name==='customize') renderCustomizeView();
   if(name==='shop') renderShopView();
   if(name==='profile') renderProfileView();
   if(name==='ranked') renderRankedView();
   if(name==='challenges') renderChallengesView();
+  if(['customize','shop','profile'].includes(name)) updateTopbarActive(name);
   if(name==='customize' || name==='profile') ensurePreviewAnimating();
 }
 // Animated rank skins/halos (Unreal's hue cycle, Platinum's spinning rings, etc.) read the
 // same `time` the in-game fighter uses, but that only advances during a running match — so
-// outside of one (i.e. whenever the menu preview is what's actually visible) this loop
-// briefly points `time` at the wall clock, redraws the visible preview canvas(es), and
-// restores it. Self-stops once neither Customize nor Profile is on screen.
+// outside of one (i.e. whenever a menu preview is what's actually visible) this loop briefly
+// points `time` at the wall clock, redraws the visible preview canvas(es), and restores it.
+// Self-stops once none of Lobby/Customize/Profile are on screen.
 let previewAnimRAF = null;
 function ensurePreviewAnimating(){
   if(previewAnimRAF!=null) return;
   const tick = ()=>{
+    const lobbyOpen = !topNavView.classList.contains('hidden');
     const custOpen = !SUBVIEWS.customize.classList.contains('hidden');
     const profOpen = !SUBVIEWS.profile.classList.contains('hidden');
-    if(!custOpen && !profOpen){ previewAnimRAF=null; return; }
+    if(!lobbyOpen && !custOpen && !profOpen){ previewAnimRAF=null; return; }
     if(!running){
       const savedTime = time;
       time = performance.now();
+      if(lobbyOpen) drawPreviewCanvas(document.getElementById('lobbyPreview'));
       if(custOpen) drawPreviewCanvas(document.getElementById('custPreview'));
       if(profOpen) drawPreviewCanvas(document.getElementById('profilePreview'));
       time = savedTime;
@@ -1761,6 +1921,10 @@ document.querySelectorAll('.back-btn').forEach(btn=>{
   btn.addEventListener('click', ()=> showSubview('top'));
 });
 refreshTopNavSummary();
+updateTopbarActive('top');
+// renderLobbyView() itself is called once at the very bottom of this script, after
+// RANK_BADGE_SHAPES/rankBadgeSvg (used by the rank badge it draws) are actually defined —
+// calling it this early would hit those consts before their declaration runs.
 
 // ============================== DEV UNLOCK-ALL CHEAT ==============================
 // Disguised as a stub "chat" box (menu-only) so it doesn't read as a cheat-code
@@ -1871,6 +2035,9 @@ function renderCosmeticGrid(gridEl, list){
       saveProfile();
       if(player) applyEquippedCosmetics(player);
       renderCustomizeView();
+      // The Lobby's centered character reads the exact same equipped fields, so a change
+      // here must show up there immediately too — not just the next time Lobby opens.
+      if(!topNavView.classList.contains('hidden')) renderLobbyView();
     });
     gridEl.appendChild(card);
   });
@@ -1967,6 +2134,68 @@ function renderShopView(){
     grid.appendChild(card);
   });
 }
+
+// Short descriptions for the mode-select modal and the Lobby's "selected mode" summary —
+// same wording rankedView's own Solo/Dúos/Tríos buttons already use, so the numbers never
+// drift between the two places a player can read them.
+const RANKED_MODE_DESC = {
+  rankedSolo:  'Tú contra 15 rivales individuales',
+  rankedDuos:  'Tú + 1 aliado bot vs 7 equipos de 2',
+  rankedTrios: 'Tú + 2 aliados bot vs 5 equipos de 3',
+};
+// The Lobby hub: a live character preview (exactly what CUSTOMIZE/PROFILE already draw —
+// same profile.equippedColor/Hat/Halo, so equipping something new shows up here too), the
+// player's current rank badge, and the currently selected Battle Royale mode/JUGAR button.
+function renderLobbyView(){
+  document.getElementById('lobbyNameLine').textContent = displayName(profile.name);
+  drawPreviewCanvas(document.getElementById('lobbyPreview'));
+
+  const prog = rankProgress(profile.ranked.points);
+  document.getElementById('lobbyRankBadge').innerHTML = rankBadgeSvg(prog.tier);
+  document.getElementById('lobbyRankName').textContent = prog.tier.name;
+  document.getElementById('lobbyRankName').style.color = rankVisualColor(prog.tier);
+  // The stage's background gradient tints toward the player's own rank color — a small
+  // touch that ties "who you are" (rank) into the hub's visual identity.
+  document.getElementById('lobbyStage').style.setProperty('--lobby-accent', rankVisualColor(prog.tier)+'33');
+
+  const modeCfg = RANKED_MODE_CONFIG[profile.selectedRankedMode] || RANKED_MODE_CONFIG.rankedSolo;
+  document.getElementById('lobbyModeName').textContent = modeCfg.label;
+  document.getElementById('lobbyModeDesc').textContent = RANKED_MODE_DESC[profile.selectedRankedMode] || '';
+}
+
+// ---- Mode-select modal: pick Solo/Dúos/Tríos, confirm, and return to the Lobby showing
+// the chosen mode — the selection only commits to profile.selectedRankedMode on confirm,
+// so cancelling leaves whatever was already selected untouched. ----
+let modeSelectPending = null;
+function openModeSelectModal(){
+  modeSelectPending = profile.selectedRankedMode;
+  document.querySelectorAll('.mode-select-card').forEach(card=>{
+    card.classList.toggle('selected', card.dataset.modeSelect===modeSelectPending);
+  });
+  document.getElementById('modeSelectModal').classList.remove('hidden');
+}
+function closeModeSelectModal(){
+  document.getElementById('modeSelectModal').classList.add('hidden');
+}
+document.getElementById('lobbyChangeModeBtn').addEventListener('click', openModeSelectModal);
+document.querySelectorAll('.mode-select-card').forEach(card=>{
+  card.addEventListener('click', ()=>{
+    modeSelectPending = card.dataset.modeSelect;
+    document.querySelectorAll('.mode-select-card').forEach(c=> c.classList.toggle('selected', c===card));
+  });
+});
+document.getElementById('modeSelectCancelBtn').addEventListener('click', closeModeSelectModal);
+document.getElementById('modeSelectConfirmBtn').addEventListener('click', ()=>{
+  if(modeSelectPending){ profile.selectedRankedMode = modeSelectPending; saveProfile(); }
+  closeModeSelectModal();
+  renderLobbyView();
+});
+// Starts a match directly in whatever Battle Royale mode is currently selected — the exact
+// same resetMatch() call the rankedView Solo/Dúos/Tríos buttons already use.
+document.getElementById('lobbyPlayBtn').addEventListener('click', ()=>{
+  document.getElementById('startScreen').classList.add('hidden');
+  resetMatch(profile.selectedRankedMode);
+});
 
 function renderProfileView(){
   document.getElementById('profileNameLine').textContent = displayName(profile.name);
@@ -4392,6 +4621,10 @@ function loop(now){
   updateHUD();
 }
 requestAnimationFrame(loop);
+// Initial Lobby paint — deferred to here (rather than up with the rest of the menu-wiring
+// bootstrap) because it draws the rank badge via RANK_BADGE_SHAPES/rankBadgeSvg, which are
+// declared later in the file than that bootstrap code runs.
+renderLobbyView();
 
 })();
 </script>
