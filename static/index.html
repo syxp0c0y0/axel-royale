@@ -425,11 +425,14 @@ h1.title{
 #bpXpWrap{flex:1; text-align:left;}
 #bpXpLabel{font-family:'Rajdhani'; font-size:12px; color:var(--muted); margin-top:5px; font-variant-numeric:tabular-nums;}
 #bpXpWrap .rk-fill{background:var(--gold);}
-#bpPremiumRow{
+#bpPremiumRow, #bpBuyLevelRow{
   display:flex; align-items:center; justify-content:space-between; gap:12px; background:var(--surface);
   border:1px solid var(--line); border-radius:10px; padding:12px 14px; margin-bottom:18px;
 }
-#bpPremiumInfo .rt-desc{max-width:none;}
+#bpPremiumInfo .rt-desc, #bpBuyLevelInfo .rt-desc{max-width:none;}
+#bpBuyLevelBtn{border-color:var(--build); color:var(--build); background:rgba(79,209,197,0.1);}
+#bpBuyLevelBtn:hover{border-color:var(--build);}
+#bpBuyLevelBtn:disabled{opacity:.45; cursor:not-allowed; border-color:var(--line); color:var(--muted); background:transparent;}
 #bpPremiumActiveTag{
   font-family:'Rajdhani'; font-weight:700; font-size:12px; letter-spacing:.05em; color:var(--gold);
   background:rgba(255,207,92,0.12); border:1px solid rgba(255,207,92,0.4); border-radius:6px; padding:8px 12px;
@@ -935,6 +938,13 @@ h1.title{
           <div class="rk-track"><div class="rk-fill" id="bpXpFill"></div></div>
           <div id="bpXpLabel">0 / 300 XP</div>
         </div>
+      </div>
+      <div id="bpBuyLevelRow">
+        <div id="bpBuyLevelInfo">
+          <div class="rt-title">COMPRAR NIVEL</div>
+          <div class="rt-desc">Avanza al siguiente nivel con monedas, de uno en uno — no puedes saltarte niveles.</div>
+        </div>
+        <button class="mode-btn" id="bpBuyLevelBtn" style="width:auto;">COMPRAR — 53 🪙</button>
       </div>
       <div id="bpPremiumRow">
         <div id="bpPremiumInfo">
@@ -1692,6 +1702,27 @@ function buyBattlePassPremium(){
   saveProfile();
   refreshTopNavSummary();
   showToast('¡PASE DE BATALLA PREMIUM DESBLOQUEADO! 🎫');
+  renderBattlePassView();
+}
+// Coins can buy your way through the pass too — but strictly one level at a time. There is
+// no "buy level 50" — this only ever grants exactly the XP still missing to complete
+// whatever level is immediately next, so level 50 is unreachable this way without having
+// already gone through 49, 48, ... 1 first (via XP or via this same button, repeatedly).
+// Price scales with the level being bought — buying the whole pass this way costs far more
+// than grinding it out, keeping XP the "real" way to progress and this a genuine but
+// bounded shortcut, not a way to skip the economy entirely.
+function levelBuyPrice(level){ return 50 + level*3; }
+function buyNextBattlePassLevel(){
+  const info = battlePassLevelInfo(profile.battlePass.xp);
+  if(info.maxed) return;
+  const nextLevel = info.level+1;
+  const price = levelBuyPrice(nextLevel);
+  if(profile.coins < price){ showToast('Monedas insuficientes para comprar el nivel '+nextLevel); return; }
+  const xpNeeded = info.xpForNext - info.xpIntoLevel; // exactly enough to complete THIS level, no more
+  profile.coins -= price;
+  saveProfile();
+  refreshTopNavSummary();
+  grantBattlePassXP(xpNeeded); // same single XP-mutation path everything else uses — its own level-up toast covers the feedback here
   renderBattlePassView();
 }
 
@@ -2892,6 +2923,21 @@ function renderBattlePassView(){
   document.getElementById('bpPremiumActiveTag').classList.toggle('hidden', !profile.battlePass.premium);
   document.getElementById('bpPremiumPriceLabel').textContent = PREMIUM_PASS_PRICE;
 
+  // Rebuilds the button's/description's text fresh every render (rather than keeping a
+  // persisting nested <span> to update) — simpler than a button.innerHTML overwrite
+  // destroying a child element other code still expects to find by id.
+  const buyBtn = document.getElementById('bpBuyLevelBtn');
+  const buyDesc = document.getElementById('bpBuyLevelInfo').querySelector('.rt-desc');
+  if(info.maxed){
+    buyBtn.disabled = true; buyBtn.textContent = 'NIVEL MÁXIMO ALCANZADO';
+    buyDesc.textContent = 'Ya llegaste al nivel 100 — no hay más niveles que comprar.';
+  } else {
+    const nextLevel = info.level+1, price = levelBuyPrice(nextLevel);
+    buyDesc.textContent = 'Avanza al nivel '+nextLevel+' con monedas, de uno en uno — no puedes saltarte niveles.';
+    buyBtn.innerHTML = 'COMPRAR — '+price+' 🪙';
+    buyBtn.disabled = false;
+  }
+
   const rows = [];
   for(let lvl=1; lvl<=BATTLE_PASS_MAX_LEVEL; lvl++){
     rows.push(`<div class="bp-level-row">
@@ -2907,6 +2953,7 @@ function renderBattlePassView(){
   refreshTopNavSummary();
 }
 document.getElementById('bpPremiumBtn').addEventListener('click', buyBattlePassPremium);
+document.getElementById('bpBuyLevelBtn').addEventListener('click', buyNextBattlePassLevel);
 
 function renderRankedView(){
   const prog = rankProgress(profile.ranked.points);
