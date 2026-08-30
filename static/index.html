@@ -272,6 +272,7 @@ h1.title{
 @keyframes haloTwinkle{ 0%,100%{opacity:.2; transform:scale(.75);} 50%{opacity:1; transform:scale(1.2);} }
 @keyframes haloFall{ 0%{transform:translateY(-3px); opacity:0;} 15%{opacity:1;} 100%{transform:translateY(9px); opacity:0;} }
 @keyframes haloFlashCard{ 0%,88%,100%{opacity:0;} 92%{opacity:.9;} }
+@keyframes haloHueRotate{ from{filter:hue-rotate(0deg);} to{filter:hue-rotate(360deg);} }
 .halo-ring-spin{ animation:haloSpin 6s linear infinite; }
 .halo-ring-spin-rev{ animation:haloSpinRev 4.5s linear infinite; }
 .halo-ring-spin-fast{ animation:haloSpin 3s linear infinite; }
@@ -279,6 +280,21 @@ h1.title{
 .halo-twinkle{ transform-origin:center; animation:haloTwinkle 1.6s ease-in-out infinite; }
 .halo-fall{ animation:haloFall 2.4s linear infinite; }
 .halo-flash{ animation:haloFlashCard 3.6s ease-in-out infinite; }
+/* Unreal's holographic/iridescent cycle — a plain hue-rotate filter over the whole ring
+   group, so the "gradiente animado" requirement costs nothing beyond one CSS animation. */
+.halo-holo{ animation:haloHueRotate 4s linear infinite; }
+/* Rank-reward skin swatches: a metallic/holographic gradient circle instead of a flat fill. */
+.rank-skin-swatch{ box-shadow:inset 0 0 8px rgba(255,255,255,.3), inset 0 -6px 10px rgba(0,0,0,.25); }
+/* Unreal cards get an animated holographic border/glow — cycling actual border-color and
+   box-shadow stops (NOT a filter:hue-rotate on the whole card, which would also discolor
+   the card's text and icons) to match the skin/halo. */
+@keyframes haloBorderCycle{
+  0%,100%{ border-color:#c084fc; box-shadow:0 0 10px #c084fc66; }
+  25%{ border-color:#ec4899; box-shadow:0 0 10px #ec489966; }
+  50%{ border-color:#22d3ee; box-shadow:0 0 10px #22d3ee66; }
+  75%{ border-color:#3b82f6; box-shadow:0 0 10px #3b82f666; }
+}
+.cosmetic-card.holo-card{ animation:haloBorderCycle 5s ease-in-out infinite; }
 .shop-balance{
   font-family:'Rajdhani'; font-weight:700; font-size:16px; color:var(--gold); margin-bottom:14px;
   letter-spacing:.05em;
@@ -690,6 +706,24 @@ const RANK_TIERS = [
   {id:'champion', name:'Champion', min:6000, max:7999,    color:'#ff8bcf'},
   {id:'unreal',   name:'Unreal',   min:8000, max:Infinity, color:'#ffffff'},
 ];
+// Single source of truth for each rank tier's visual identity — the rank skin (body
+// gradient), the rank halo, and every cosmetic card's border/glow all read from here, so
+// none of them can drift out of sync with each other (which is exactly how Champion
+// briefly ended up pink instead of red). Independent of RANK_TIERS.color above (which
+// drives the plain rank tag/badge/leaderboard) since those need one flat color while this
+// needs a richer, escalating identity. `gradient` is a list of [offset, cssColor] stops
+// from highlight to shadow; `unreal` has none because its gradient is computed live (an
+// animated hue cycle) — see rankSkinGradient() and the CSS .halo-holo class.
+const RANK_IDENTITY = {
+  bronze:   { base:'#c9814a', gradient:[[0,'#f0b47c'],[0.45,'#a9683a'],[1,'#5c3d22']], glowBlur:6  },
+  silver:   { base:'#d7dee6', gradient:[[0,'#9aa3ad'],[0.5,'#f8fbfd'],[1,'#8b93a0']], glowBlur:8  },
+  gold:     { base:'#ffd166', gradient:[[0,'#fff3c4'],[0.45,'#ffd166'],[1,'#c9720a']], glowBlur:13 },
+  platinum: { base:'#2de2c0', gradient:[[0,'#bafff2'],[0.35,'#2de2c0'],[0.7,'#ffffff'],[1,'#17b8b0']], glowBlur:15 },
+  diamond:  { base:'#4fb8ff', gradient:[[0,'#eaf6ff'],[0.35,'#4fb8ff'],[0.7,'#1f7fff'],[1,'#39e0ff']], glowBlur:17 },
+  elite:    { base:'#9b3df0', gradient:[[0,'#c9a6ff'],[0.5,'#9333ea'],[1,'#c026d3']], glowBlur:17 },
+  champion: { base:'#e11d3f', gradient:[[0,'#ff6b5c'],[0.45,'#dc143c'],[1,'#5c0f14']], glowBlur:19 },
+  unreal:   { base:'#ff2fb0', gradient:null, glowBlur:23 },
+};
 // Bots play genuinely better at higher tiers — faster reactions, tighter aim,
 // more aggressive engagement range, more willing to chase/use items, and more
 // decisive about fleeing at low hp — never just "more hp/damage".
@@ -792,7 +826,7 @@ const RANK_REWARD_RARITY = {
   diamond:'rare', elite:'epic', champion:'legendary', unreal:'mythic',
 };
 const RANK_REWARD_COLORS = RANK_TIERS.map(t=>({
-  id:'color_rank_'+t.id, type:'color', name:t.name, hex:t.color, rarity:RANK_REWARD_RARITY[t.id], price:0, rankReward:t.id,
+  id:'color_rank_'+t.id, type:'color', name:t.name, hex:RANK_IDENTITY[t.id].base, rarity:RANK_REWARD_RARITY[t.id], price:0, rankReward:t.id,
 }));
 const HALOS = [
   {id:'halo_none', type:'halo', name:'Ninguno', shape:'none', rarity:'common', price:0, default:true},
@@ -879,7 +913,7 @@ function cellKey(cx,cy){ return cx+','+cy; }
 
 function makeFighter(isBot){
   return {
-    isBot, team:0, color:null, hat:null, halo:null, rankTierId:null, spawnPos:null,
+    isBot, team:0, color:null, colorId:null, hat:null, halo:null, rankTierId:null, spawnPos:null,
     x:0, y:0, angle:0, hp:100, maxHp:100, alive:true,
     shield:0, maxShield:50,
     inventory:{shield:0, medkit:0}, consumableIdx:-1, usingItem:null, channelProgress:null,
@@ -920,6 +954,7 @@ let winner = null;
 let rankedMatch = null; // {modeCfg, tier, entryCost, milestonesHit, placementPoints, eliminationPoints, pointsThisMatch, ended, placement, afterTier, rankedUp}
 
 function applyEquippedCosmetics(f){
+  f.colorId = profile.equippedColor;
   f.color = cosmeticById(profile.equippedColor).hex;
   f.hat = profile.equippedHat;
   f.halo = profile.equippedHalo;
@@ -1403,6 +1438,30 @@ function showSubview(name){
   if(name==='shop') renderShopView();
   if(name==='profile') renderProfileView();
   if(name==='ranked') renderRankedView();
+  if(name==='customize' || name==='profile') ensurePreviewAnimating();
+}
+// Animated rank skins/halos (Unreal's hue cycle, Platinum's spinning rings, etc.) read the
+// same `time` the in-game fighter uses, but that only advances during a running match — so
+// outside of one (i.e. whenever the menu preview is what's actually visible) this loop
+// briefly points `time` at the wall clock, redraws the visible preview canvas(es), and
+// restores it. Self-stops once neither Customize nor Profile is on screen.
+let previewAnimRAF = null;
+function ensurePreviewAnimating(){
+  if(previewAnimRAF!=null) return;
+  const tick = ()=>{
+    const custOpen = !SUBVIEWS.customize.classList.contains('hidden');
+    const profOpen = !SUBVIEWS.profile.classList.contains('hidden');
+    if(!custOpen && !profOpen){ previewAnimRAF=null; return; }
+    if(!running){
+      const savedTime = time;
+      time = performance.now();
+      if(custOpen) drawPreviewCanvas(document.getElementById('custPreview'));
+      if(profOpen) drawPreviewCanvas(document.getElementById('profilePreview'));
+      time = savedTime;
+    }
+    previewAnimRAF = requestAnimationFrame(tick);
+  };
+  previewAnimRAF = requestAnimationFrame(tick);
 }
 document.querySelectorAll('.nav-btn').forEach(btn=>{
   btn.addEventListener('click', ()=> showSubview(btn.dataset.nav));
@@ -1458,8 +1517,20 @@ function trySubmitMiniChat(){
 // far more reliable across browsers/devices than hand-checking e.key for "Enter".
 miniChatForm.addEventListener('submit', e=>{ e.preventDefault(); trySubmitMiniChat(); });
 
+// Rank-reward skins get a gradient swatch (matching the in-game metallic/holographic
+// fill — see applyRankSkinFill) instead of the flat circle plain-bought colors use.
+function rankSkinSwatchHTML(tierId){
+  const id = RANK_IDENTITY[tierId];
+  if(!id) return `<div class="swatch"></div>`;
+  if(tierId==='unreal'){
+    return `<div class="swatch rank-skin-swatch halo-holo" style="background:linear-gradient(135deg,#c084fc,#ec4899,#f472b6,#22d3ee,#3b82f6);"></div>`;
+  }
+  const stops = id.gradient.map(([o,col])=>`${col} ${Math.round(o*100)}%`).join(', ');
+  return `<div class="swatch rank-skin-swatch" style="background:linear-gradient(135deg, ${stops});"></div>`;
+}
 function cosmeticSwatchHTML(c){
   if(c.type==='color'){
+    if(c.rankReward) return rankSkinSwatchHTML(c.rankReward);
     return `<div class="swatch" style="background:${c.hex}"></div>`;
   }
   if(c.type==='halo'){
@@ -1488,15 +1559,25 @@ function renderCosmeticGrid(gridEl, list){
     const field = EQUIP_FIELD[c.type];
     const owned = ownsCosmetic(c.id);
     const equipped = profile[field]===c.id;
+    const identity = c.rankReward && RANK_IDENTITY[c.rankReward];
     const card = document.createElement('div');
-    card.className = 'cosmetic-card'+(equipped?' equipped':'');
-    card.style.borderColor = RARITY_COLORS[c.rarity];
+    card.className = 'cosmetic-card'+(equipped?' equipped':'')+(c.rankReward==='unreal'?' holo-card':'');
+    if(identity){
+      card.style.borderColor = identity.base;
+      card.style.boxShadow = `0 0 10px ${identity.base}4d`;
+    } else {
+      card.style.borderColor = RARITY_COLORS[c.rarity];
+    }
     card.innerHTML = `${cosmeticSwatchHTML(c)}<div class="cname">${c.name}</div>
-      <div class="crarity" style="color:${RARITY_COLORS[c.rarity]}">${RARITY_LABEL[c.rarity]}</div>
+      <div class="crarity" style="color:${identity? identity.base : RARITY_COLORS[c.rarity]}">${RARITY_LABEL[c.rarity]}</div>
       ${!owned?'<div class="lockdot">🔒</div>'+lockHintHTML(c):''}${equipped?'<div class="equipbadge">EQUIPADO</div>':''}`;
     card.addEventListener('click', ()=>{
       if(!owned) return;
-      profile[field] = c.id; saveProfile();
+      // Clicking an already-equipped halo again unequips it entirely — colors/hats always
+      // have some value equipped (there's no "no color"), so only halo gets this toggle.
+      if(c.type==='halo' && equipped){ profile[field] = 'halo_none'; }
+      else { profile[field] = c.id; }
+      saveProfile();
       if(player) applyEquippedCosmetics(player);
       renderCustomizeView();
     });
@@ -1511,26 +1592,33 @@ function renderCustomizeView(){
   drawPreviewCanvas(document.getElementById('custPreview'));
 }
 
+// The customize/profile preview builds its character from EXACTLY the same equipped
+// fields the in-game fighter reads (profile.equippedColor/Hat/Halo) — no hardcoded
+// preview-only values, and nothing renders here unless it's actually equipped.
 function drawPreviewCanvas(canvas){
   const pctx = canvas.getContext('2d');
   const w=canvas.width, h=canvas.height;
   pctx.clearRect(0,0,w,h);
-  const color = cosmeticById(profile.equippedColor).hex;
+  const colorDef = cosmeticById(profile.equippedColor);
+  const color = colorDef.hex;
+  const skinTier = colorDef.rankReward;
   const hat = cosmeticById(profile.equippedHat);
   const halo = cosmeticById(profile.equippedHalo);
   const cx=w/2, cy=h/2+8, r=34;
-  pctx.save();
   pctx.beginPath(); pctx.ellipse(cx,cy+r*0.75,r*0.9,r*0.35,0,0,Math.PI*2);
   pctx.fillStyle='rgba(0,0,0,0.35)'; pctx.fill();
-  pctx.beginPath(); pctx.arc(cx,cy,r,0,Math.PI*2);
-  pctx.fillStyle = color; pctx.fill();
-  pctx.strokeStyle='rgba(255,255,255,0.55)'; pctx.lineWidth=2; pctx.stroke();
-  pctx.restore();
+  withCtx(pctx, ()=>{
+    ctx.beginPath(); ctx.arc(cx,cy,r,0,Math.PI*2);
+    if(!skinTier || !applyRankSkinFill(skinTier, cx, cy, r)) ctx.fillStyle = color;
+    ctx.fill();
+    ctx.shadowBlur = 0;
+    ctx.strokeStyle='rgba(255,255,255,0.55)'; ctx.lineWidth=2; ctx.stroke();
+  });
   if(hat && hat.shape!=='none'){
     withCtx(pctx, ()=> drawHat(hat.shape, color==='#2a2f3a'?'#5a6070':color, cx, cy-r*0.75, r));
   }
   if(halo && halo.shape!=='none'){
-    withCtx(pctx, ()=> drawRankHalo(halo.shape, cx, cy, r));
+    withCtx(pctx, ()=> drawRankHalo(halo.shape, cx, cy, r, 1.7));
   }
 }
 // drawHat/roundRect draw against the module-level `ctx` — temporarily point it at
@@ -2776,7 +2864,7 @@ function hatSwatchSvg(shape,color){
 // not the swatch's rarity color, since the whole point is that each tier looks distinct.
 function haloSwatchSvg(shape,color){
   if(shape==='none') return `<svg viewBox="0 0 32 24" width="56" height="40"></svg>`;
-  const c = HALO_COLORS[shape] || color;
+  const c = (RANK_IDENTITY[shape] && RANK_IDENTITY[shape].base) || color;
   const bodies = {
     bronze: `
       <g class="halo-ring-spin" style="transform-origin:16px 9px">
@@ -2816,14 +2904,16 @@ function haloSwatchSvg(shape,color){
     champion: `
       <ellipse class="halo-glow" cx="16" cy="9" rx="11.5" ry="4.1" fill="none" stroke="${c}" stroke-width="3"/>
       <path d="M9 6.4l1.6 1 1.6-2 1.6 2 1.7-2.4 1.7 2.4 1.6-2 1.6 2 1.6-1" fill="none" stroke="${c}" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"/>
-      <circle class="halo-twinkle" cx="16" cy="4" r="1.1" fill="#fff6d8" style="animation-delay:.4s"/>
-      <circle class="halo-twinkle" cx="7" cy="10" r="0.9" fill="#ffe9b0" style="animation-delay:.1s"/>
-      <circle class="halo-twinkle" cx="25" cy="10" r="0.9" fill="#ffe9b0" style="animation-delay:.9s"/>`,
+      <circle class="halo-twinkle" cx="16" cy="4" r="1.1" fill="#ffcdb0" style="animation-delay:.4s"/>
+      <circle class="halo-twinkle" cx="7" cy="10" r="0.9" fill="#ff9d7a" style="animation-delay:.1s"/>
+      <circle class="halo-twinkle" cx="25" cy="10" r="0.9" fill="#ff9d7a" style="animation-delay:.9s"/>`,
     unreal: `
-      <ellipse cx="16" cy="9" rx="13" ry="5.5" fill="${c}" opacity=".12"/>
-      <g class="halo-ring-spin" style="transform-origin:16px 9px"><ellipse cx="16" cy="9" rx="11.5" ry="4.3" fill="none" stroke="#ffd7ec" stroke-width="1.3" stroke-dasharray="3 4"/></g>
-      <g class="halo-ring-spin-rev" style="transform-origin:16px 9px"><ellipse cx="16" cy="9" rx="8.5" ry="3.2" fill="none" stroke="#bfe8ff" stroke-width="1.1" stroke-dasharray="2 4"/></g>
-      <ellipse class="halo-glow" cx="16" cy="9" rx="10" ry="3.7" fill="none" stroke="${c}" stroke-width="2.6"/>
+      <g class="halo-holo">
+        <ellipse cx="16" cy="9" rx="13" ry="5.5" fill="${c}" opacity=".12"/>
+        <g class="halo-ring-spin" style="transform-origin:16px 9px"><ellipse cx="16" cy="9" rx="11.5" ry="4.3" fill="none" stroke="#ffd7ec" stroke-width="1.3" stroke-dasharray="3 4"/></g>
+        <g class="halo-ring-spin-rev" style="transform-origin:16px 9px"><ellipse cx="16" cy="9" rx="8.5" ry="3.2" fill="none" stroke="#bfe8ff" stroke-width="1.1" stroke-dasharray="2 4"/></g>
+        <ellipse class="halo-glow" cx="16" cy="9" rx="10" ry="3.7" fill="none" stroke="${c}" stroke-width="2.6"/>
+      </g>
       <ellipse cx="16" cy="9" rx="10" ry="3.7" fill="none" stroke="#ffffff" stroke-width="1" opacity=".8"/>
       <circle class="halo-twinkle" cx="8" cy="6.5" r="1" fill="#ffc2e6" style="animation-delay:.1s"/>
       <circle class="halo-twinkle" cx="24" cy="11.5" r="1" fill="#ffffff" style="animation-delay:.6s"/>
@@ -2832,13 +2922,36 @@ function haloSwatchSvg(shape,color){
   };
   return `<svg viewBox="0 0 32 24" width="56" height="40" style="overflow:visible">${bodies[shape]||''}</svg>`;
 }
-// Halo colors are their own palette, independent of RANK_TIERS.color (which drives the
-// rank tag/badge/leaderboard elsewhere) — the halo redesign calls for specific colors per
-// tier (e.g. Champion gold/orange, Unreal neon pink) that don't all match those badge tones.
-const HALO_COLORS = {
-  bronze:'#c9814a', silver:'#d7dee6', gold:'#ffd166', platinum:'#39d6ff',
-  diamond:'#7fc7ff', elite:'#a855f7', champion:'#ffb347', unreal:'#ff2fb0',
-};
+// Unreal's fill is a slowly-cycling hue sweep through purple/magenta/pink/cyan/electric
+// blue rather than a fixed gradient — the "holográfico/iridiscente" look the top rank needs.
+function rankSkinGradient(cx,cy,r){
+  const hue = (time/1000*22)%360;
+  const grad = ctx.createLinearGradient(cx-r*0.6,cy-r*0.6,cx+r*0.6,cy+r*0.7);
+  grad.addColorStop(0, `hsl(${hue},95%,80%)`);
+  grad.addColorStop(0.35, `hsl(${(hue+70)%360},92%,64%)`);
+  grad.addColorStop(0.7, `hsl(${(hue+160)%360},90%,56%)`);
+  grad.addColorStop(1, `hsl(${(hue+230)%360},92%,58%)`);
+  return grad;
+}
+// Paints the body-circle fill (and a matching glow) for a rank-reward skin instead of the
+// usual flat color. Draws against the ambient `ctx` (or whatever withCtx() points it at),
+// exactly like drawHat/drawRankHalo, so it works unchanged from both drawFighter (already
+// translated to the fighter's local origin) and the menu preview canvases.
+function applyRankSkinFill(tierId, cx, cy, r){
+  const id = RANK_IDENTITY[tierId];
+  if(!id) return false;
+  if(tierId==='unreal'){
+    ctx.fillStyle = rankSkinGradient(cx,cy,r);
+    ctx.shadowColor = `hsl(${(time/1000*22)%360},95%,65%)`;
+  } else {
+    const grad = ctx.createLinearGradient(cx-r*0.6,cy-r*0.6,cx+r*0.6,cy+r*0.7);
+    id.gradient.forEach(([o,c])=>grad.addColorStop(o,c));
+    ctx.fillStyle = grad;
+    ctx.shadowColor = id.base;
+  }
+  ctx.shadowBlur = id.glowBlur;
+  return true;
+}
 // ---- rank halo drawing primitives (shared by every tier below) ----
 function haloDot(px,py,size,color,alpha){
   ctx.globalAlpha=alpha; ctx.beginPath(); ctx.arc(px,py,size,0,Math.PI*2); ctx.fillStyle=color; ctx.fill(); ctx.globalAlpha=1;
@@ -2879,14 +2992,16 @@ function haloDashRing(rx,ry,color,width,dashLen,gapLen,offset,alpha,glow){
 // withCtx() has pointed it at) and animates off `time`, so it stays a single frozen frame
 // wherever it's used outside the main loop — fine for a menu preview, which only
 // re-renders when the player interacts with it.
-function drawRankHalo(tierId, x, y, r){
-  const tier = RANK_TIERS.find(t=>t.id===tierId);
-  if(!tier) return;
-  const color = HALO_COLORS[tierId] || tier.color;
+function drawRankHalo(tierId, x, y, r, offsetMult){
+  const identity = RANK_IDENTITY[tierId];
+  if(!identity) return;
+  const color = identity.base;
   const t = time/1000;
   ctx.save();
-  // Floats well clear of the hp bar/name/rank tag stack above the head, with a slow bob.
-  ctx.translate(x, y-r*3.6-Math.sin(t*1.4)*1.5);
+  // Floats clear of the hp bar/name/rank tag stack above the head in-game (the default
+  // 3.6x offset); the compact menu preview has no such stack to clear and a much smaller
+  // canvas, so it passes a smaller offsetMult to keep the halo on-screen.
+  ctx.translate(x, y-r*(offsetMult||3.6)-Math.sin(t*1.4)*1.5);
   switch(tierId){
     case 'bronze': {
       // Solid metallic band with a soft rim light, a slow single bright glint orbiting,
@@ -3002,8 +3117,8 @@ function drawRankHalo(tierId, x, y, r){
       break;
     }
     case 'champion': {
-      // A big, warm ring topped with small crown spikes, a slow inner glow sweep, and a
-      // wide but restrained gold particle field — strong yet "elegant", not busy.
+      // Aggressive, powerful crimson — a big ring topped with small crown spikes, a slow
+      // inner glow sweep, and a restrained orange-red particle field.
       const rx=r*1.35, ry=r*0.48;
       ctx.strokeStyle=color; ctx.lineWidth=3.6; ctx.shadowColor=color; ctx.shadowBlur=20;
       ctx.beginPath(); ctx.ellipse(0,0,rx,ry,0,0,Math.PI*2); ctx.stroke();
@@ -3023,34 +3138,38 @@ function drawRankHalo(tierId, x, y, r){
         ctx.lineTo(bx+(nx/norm)*spikeLen*-1, by+(ny/norm)*spikeLen*-1);
         ctx.lineTo(bx+nx/norm*3, by+ny/norm*1.2);
         ctx.closePath();
-        ctx.fillStyle= i===Math.floor(spikes/2)? '#fff6d8':color;
+        ctx.fillStyle= i===Math.floor(spikes/2)? '#ffcdb0':color;
         ctx.fill();
       }
       const sweepA=t*1.2;
-      ctx.save(); ctx.globalAlpha=0.55; ctx.strokeStyle='#fff2c2'; ctx.lineWidth=3;
+      ctx.save(); ctx.globalAlpha=0.55; ctx.strokeStyle='#ffb199'; ctx.lineWidth=3;
       ctx.beginPath(); ctx.ellipse(0,0,rx,ry,0,sweepA,sweepA+0.7); ctx.stroke();
       ctx.restore();
       for(let i=0;i<5;i++){
         const a=-t*0.8+i*(Math.PI*2/5);
-        haloDot(Math.cos(a)*rx*0.92, Math.sin(a)*ry*0.92, 1.8, '#ffe9b0', 0.8);
+        haloDot(Math.cos(a)*rx*0.92, Math.sin(a)*ry*0.92, 1.8, '#ff9d7a', 0.8);
       }
       break;
     }
     case 'unreal': {
-      // The showcase halo: a soft aura, a bright neon-pink main ring, two orbiting
-      // fragment rings, a dense pink/white particle field, radiating energy pulses, and
-      // an occasional bright flash — clearly the most exclusive effect in the game.
+      // The showcase halo: a slowly-cycling holographic ring (purple → magenta → pink →
+      // cyan → electric blue, the same hue sweep as the Unreal skin), a soft aura, two
+      // orbiting fragment rings, a discreet twinkling particle field, radiating energy
+      // pulses, and an occasional bright flash — clearly the most exclusive effect in the game.
       const rx=r*1.4, ry=r*0.5;
+      const holoHue = (t*22)%360;
+      const holoColor = `hsl(${holoHue},92%,62%)`;
+      const holoColor2 = `hsl(${(holoHue+70)%360},90%,68%)`;
       // aura
       const auraPulse = 0.85+Math.sin(t*1.1)*0.15;
-      ctx.globalAlpha=0.14*auraPulse; ctx.fillStyle='#ff5ca3';
+      ctx.globalAlpha=0.14*auraPulse; ctx.fillStyle=holoColor;
       ctx.beginPath(); ctx.ellipse(0,0,rx*1.9,ry*3.2,0,0,Math.PI*2); ctx.fill();
       ctx.globalAlpha=1;
       // orbiting fragment rings
-      haloDashRing(rx*1.2,ry*1.2,'#ffd7ec',1.6,5,10,t*70,0.6,8);
-      haloDashRing(rx*0.85,ry*0.85,'#bfe8ff',1.4,4,9,-t*90,0.55,6);
+      haloDashRing(rx*1.2,ry*1.2,holoColor2,1.6,5,10,t*70,0.6,8);
+      haloDashRing(rx*0.85,ry*0.85,`hsl(${(holoHue+200)%360},90%,72%)`,1.4,4,9,-t*90,0.55,6);
       // main ring
-      ctx.strokeStyle='#ff5ca3'; ctx.lineWidth=3.6; ctx.shadowColor='#ff5ca3'; ctx.shadowBlur=24;
+      ctx.strokeStyle=holoColor; ctx.lineWidth=3.6; ctx.shadowColor=holoColor; ctx.shadowBlur=24;
       ctx.beginPath(); ctx.ellipse(0,0,rx,ry,0,0,Math.PI*2); ctx.stroke();
       ctx.strokeStyle='rgba(255,255,255,0.85)'; ctx.lineWidth=1.4; ctx.shadowBlur=10;
       ctx.beginPath(); ctx.ellipse(0,0,rx,ry,0,0,Math.PI*2); ctx.stroke();
@@ -3059,18 +3178,18 @@ function drawRankHalo(tierId, x, y, r){
       for(let i=0;i<4;i++){
         const a=t*0.9+i*(Math.PI/2);
         const pulse=(t*0.8+i*0.25)%1;
-        ctx.globalAlpha=(1-pulse)*0.6; ctx.strokeStyle='#ffe3f3'; ctx.lineWidth=1.2;
+        ctx.globalAlpha=(1-pulse)*0.6; ctx.strokeStyle=holoColor2; ctx.lineWidth=1.2;
         ctx.beginPath();
         ctx.moveTo(Math.cos(a)*rx*0.8, Math.sin(a)*ry*0.8);
         ctx.lineTo(Math.cos(a)*rx*(1+pulse*0.8), Math.sin(a)*ry*(1+pulse*0.8));
         ctx.stroke();
       }
       ctx.globalAlpha=1;
-      // particle field — pink and white mixed
-      for(let i=0;i<9;i++){
-        const a=t*1.4+i*(Math.PI*2/9);
-        const col=i%2===0? '#ffc2e6':'#ffffff';
-        haloDot(Math.cos(a)*rx*0.95, Math.sin(a)*ry*0.95, 1.8, col, 0.55+Math.sin(t*3+i)*0.35);
+      // discreet twinkling particle field — holo-tinted, mixed with white
+      for(let i=0;i<7;i++){
+        const a=t*1.4+i*(Math.PI*2/7);
+        const col=i%2===0? `hsl(${(holoHue+i*40)%360},90%,75%)`:'#ffffff';
+        haloDot(Math.cos(a)*rx*0.95, Math.sin(a)*ry*0.95, 1.6, col, 0.5+Math.sin(t*3+i)*0.3);
       }
       // occasional special flash
       const cycle=t%4.2;
@@ -3110,8 +3229,11 @@ function drawFighter(f){
   ctx.fillStyle='rgba(0,0,0,0.35)'; ctx.fill();
   ctx.rotate(f.angle);
   ctx.beginPath(); ctx.arc(0,0,PLAYER_R,0,Math.PI*2);
-  ctx.fillStyle = bodyColor;
+  const colorDef = f.colorId && cosmeticById(f.colorId);
+  const skinTier = colorDef && colorDef.rankReward;
+  if(!skinTier || !applyRankSkinFill(skinTier, 0, 0, PLAYER_R)) ctx.fillStyle = bodyColor;
   ctx.fill();
+  ctx.shadowBlur = 0;
   ctx.strokeStyle = 'rgba(255,255,255,0.55)'; ctx.lineWidth=2; ctx.stroke();
   ctx.fillStyle = '#1a1e28';
   ctx.fillRect(PLAYER_R-4, -4, 20, 8);
