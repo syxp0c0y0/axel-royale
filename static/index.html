@@ -284,18 +284,28 @@ h1.title{
 .chal-claim-btn.ready:hover{filter:brightness(1.08);}
 .chal-claim-btn.done{border-color:var(--line); color:var(--muted); background:var(--surface2);}
 
-/* ---------- persistent top bar (Lobby / Locker / Item Shop / Profile) ---------- */
+/* ---------- persistent top bar (Lobby / Battle Pass / Challenges / Locker / Item Shop / Profile) ---------- */
 .main-topbar{
-  display:flex; gap:6px; background:var(--surface); border:1px solid var(--line); border-radius:10px;
+  display:flex; gap:3px; background:var(--surface); border:1px solid var(--line); border-radius:10px;
   padding:5px; margin-bottom:18px; position:sticky; top:0; z-index:3;
 }
 .topbar-btn{
-  flex:1; font-family:'Rajdhani'; font-weight:700; font-size:13px; letter-spacing:.04em;
-  background:transparent; border:none; border-radius:7px; color:var(--muted); padding:10px 4px;
-  cursor:pointer; transition:background .15s, color .15s;
+  flex:1; min-width:0; font-family:'Rajdhani'; font-weight:700; font-size:10.5px; letter-spacing:.01em;
+  background:transparent; border:none; border-radius:7px; color:var(--muted); padding:9px 2px;
+  cursor:pointer; transition:background .15s, color .15s; position:relative; line-height:1.25;
 }
 .topbar-btn:hover{color:var(--ink);}
 .topbar-btn.active{background:var(--surface2); color:var(--ink); box-shadow:inset 0 0 0 1px var(--line);}
+.topbar-badge{
+  display:inline-flex; align-items:center; justify-content:center; min-width:14px; height:14px;
+  background:var(--heal); color:#04321a; font-family:'Rajdhani'; font-weight:700; font-size:9px;
+  border-radius:7px; padding:0 4px; margin-left:3px; vertical-align:top;
+}
+.mode-select-link{
+  display:block; width:100%; text-align:left; background:none; border:none; cursor:pointer;
+  font-family:'Rajdhani'; font-weight:600; font-size:11.5px; color:var(--muted); padding:6px 2px 2px;
+}
+.mode-select-link:hover{color:var(--build);}
 
 /* ---------- Lobby hub ---------- */
 #lobbyStage{
@@ -727,6 +737,8 @@ h1.title{
     <div id="topNavView">
       <div class="main-topbar">
         <button class="topbar-btn nav-btn" data-nav="top">LOBBY</button>
+        <button class="topbar-btn nav-btn" data-nav="battlepass">BATTLE PASS</button>
+        <button class="topbar-btn nav-btn" data-nav="challenges">CHALLENGES<span class="topbar-badge challenges-topbar-badge hidden">0</span></button>
         <button class="topbar-btn nav-btn" data-nav="customize">LOCKER</button>
         <button class="topbar-btn nav-btn" data-nav="shop">ITEM SHOP</button>
         <button class="topbar-btn nav-btn" data-nav="profile">PROFILE</button>
@@ -763,21 +775,6 @@ h1.title{
         <div class="topnav-card"><span class="v" id="navCoins">0</span><span class="l">MONEDAS</span></div>
         <div class="topnav-card"><span class="v" id="navKills">0</span><span class="l">BAJAS</span></div>
         <div class="topnav-card"><span class="v" id="navWins">0</span><span class="l">VICTORIAS</span></div>
-      </div>
-
-      <div class="cust-section-label">MÁS</div>
-      <div class="modes" style="grid-template-columns:repeat(2,1fr);">
-        <button class="mode-btn nav-btn challenges-btn" data-nav="challenges" id="challengesNavBtn">
-          DESAFÍOS<span class="d">Misiones</span>
-          <span id="challengesNavBadge" class="challenges-badge hidden">0</span>
-        </button>
-        <button class="mode-btn nav-btn battlepass-btn" data-nav="battlepass" id="battlePassNavBtn">
-          PASE DE BATALLA<span class="d" id="battlePassNavSub">Nivel 0</span>
-        </button>
-        <button class="mode-btn nav-btn" data-nav="ranked" id="rankedNavBtn">
-          <span id="rankedNavRankName">RANKED</span><span class="d">Amigos y leaderboard</span>
-        </button>
-        <button class="mode-btn nav-btn" data-nav="play">MODO CLÁSICO<span class="d">1v1 / 2v2 / Práctica</span></button>
       </div>
     </div>
 
@@ -844,6 +841,8 @@ h1.title{
     <div id="customizeView" class="hidden">
       <div class="main-topbar">
         <button class="topbar-btn nav-btn" data-nav="top">LOBBY</button>
+        <button class="topbar-btn nav-btn" data-nav="battlepass">BATTLE PASS</button>
+        <button class="topbar-btn nav-btn" data-nav="challenges">CHALLENGES<span class="topbar-badge challenges-topbar-badge hidden">0</span></button>
         <button class="topbar-btn nav-btn" data-nav="customize">LOCKER</button>
         <button class="topbar-btn nav-btn" data-nav="shop">ITEM SHOP</button>
         <button class="topbar-btn nav-btn" data-nav="profile">PROFILE</button>
@@ -864,6 +863,8 @@ h1.title{
     <div id="shopView" class="hidden">
       <div class="main-topbar">
         <button class="topbar-btn nav-btn" data-nav="top">LOBBY</button>
+        <button class="topbar-btn nav-btn" data-nav="battlepass">BATTLE PASS</button>
+        <button class="topbar-btn nav-btn" data-nav="challenges">CHALLENGES<span class="topbar-badge challenges-topbar-badge hidden">0</span></button>
         <button class="topbar-btn nav-btn" data-nav="customize">LOCKER</button>
         <button class="topbar-btn nav-btn" data-nav="shop">ITEM SHOP</button>
         <button class="topbar-btn nav-btn" data-nav="profile">PROFILE</button>
@@ -875,6 +876,8 @@ h1.title{
     <div id="profileView" class="hidden">
       <div class="main-topbar">
         <button class="topbar-btn nav-btn" data-nav="top">LOBBY</button>
+        <button class="topbar-btn nav-btn" data-nav="battlepass">BATTLE PASS</button>
+        <button class="topbar-btn nav-btn" data-nav="challenges">CHALLENGES<span class="topbar-badge challenges-topbar-badge hidden">0</span></button>
         <button class="topbar-btn nav-btn" data-nav="customize">LOCKER</button>
         <button class="topbar-btn nav-btn" data-nav="shop">ITEM SHOP</button>
         <button class="topbar-btn nav-btn" data-nav="profile">PROFILE</button>
@@ -900,7 +903,14 @@ h1.title{
     </div>
 
     <div id="challengesView" class="hidden">
-      <button class="mode-btn back-btn" data-nav="top">← VOLVER</button>
+      <div class="main-topbar">
+        <button class="topbar-btn nav-btn" data-nav="top">LOBBY</button>
+        <button class="topbar-btn nav-btn" data-nav="battlepass">BATTLE PASS</button>
+        <button class="topbar-btn nav-btn" data-nav="challenges">CHALLENGES<span class="topbar-badge challenges-topbar-badge hidden">0</span></button>
+        <button class="topbar-btn nav-btn" data-nav="customize">LOCKER</button>
+        <button class="topbar-btn nav-btn" data-nav="shop">ITEM SHOP</button>
+        <button class="topbar-btn nav-btn" data-nav="profile">PROFILE</button>
+      </div>
       <p class="sub">Completa desafíos jugando partidas de verdad. El progreso se guarda solo — reclama la recompensa cuando termines uno.</p>
       <div class="cust-section-label">DIARIOS <span class="chal-reset-label" id="dailyResetLabel"></span></div>
       <div class="chal-list" id="dailyChalList"></div>
@@ -909,7 +919,14 @@ h1.title{
     </div>
 
     <div id="battlePassView" class="hidden">
-      <button class="mode-btn back-btn" data-nav="top">← VOLVER</button>
+      <div class="main-topbar">
+        <button class="topbar-btn nav-btn" data-nav="top">LOBBY</button>
+        <button class="topbar-btn nav-btn" data-nav="battlepass">BATTLE PASS</button>
+        <button class="topbar-btn nav-btn" data-nav="challenges">CHALLENGES<span class="topbar-badge challenges-topbar-badge hidden">0</span></button>
+        <button class="topbar-btn nav-btn" data-nav="customize">LOCKER</button>
+        <button class="topbar-btn nav-btn" data-nav="shop">ITEM SHOP</button>
+        <button class="topbar-btn nav-btn" data-nav="profile">PROFILE</button>
+      </div>
       <div id="bpHeader">
         <div id="bpLevelBadge"><span id="bpLevelNum">0</span><span class="bp-level-label">NIVEL</span></div>
         <div id="bpXpWrap">
@@ -997,6 +1014,7 @@ h1.title{
         <span class="rt-state-label">ACTIVADO</span>
       </button>
     </div>
+    <button type="button" class="mode-select-link" id="modeSelectFriendsLink">¿Jugar con amigos reales o ver el leaderboard? →</button>
 
     <div class="mode-select-section-label">COMBATE / ARENA</div>
     <div class="mode-select-grid mode-select-grid-2">
@@ -1014,6 +1032,7 @@ h1.title{
         <div class="msc-desc">Tú + 1 aliado bot vs 2 bots rivales</div>
       </div>
     </div>
+    <button type="button" class="mode-select-link" id="modeSelectOnlineLink">¿Multijugador online real (crear/unirse a sala)? →</button>
 
     <div class="mode-select-section-label">PRÁCTICA</div>
     <div class="mode-select-grid mode-select-grid-1">
@@ -2187,14 +2206,15 @@ function refreshTopNavSummary(){
   document.getElementById('navCoins').textContent = profile.coins;
   document.getElementById('navKills').textContent = profile.stats.kills;
   document.getElementById('navWins').textContent = profile.stats.wins;
-  const tier = rankTierFor(profile.ranked.points);
-  document.getElementById('rankedNavRankName').textContent = 'RANKED · '+tier.name.toUpperCase();
   ensureChallenges();
   const claimable = claimableChallengeCount();
-  document.getElementById('challengesNavBadge').textContent = claimable;
-  document.getElementById('challengesNavBadge').classList.toggle('hidden', claimable<=0);
-  const bpInfo = battlePassLevelInfo(profile.battlePass.xp);
-  document.getElementById('battlePassNavSub').textContent = 'Nivel '+bpInfo.level+(profile.battlePass.premium? ' · Premium':'');
+  // The top bar is duplicated across all 6 tab containers (see updateTopbarActive) — the
+  // Challenges badge lives on a class, not an id, so every copy updates together instead of
+  // only whichever one document.getElementById would have found first.
+  document.querySelectorAll('.challenges-topbar-badge').forEach(el=>{
+    el.textContent = claimable;
+    el.classList.toggle('hidden', claimable<=0);
+  });
 }
 // The 4 top-bar buttons (Lobby/Locker/Item Shop/Profile) are duplicated in every one of
 // those 4 view containers so the bar stays visible while any of them is open; keeping the
@@ -2222,7 +2242,7 @@ function showSubview(name){
   if(name==='ranked') renderRankedView();
   if(name==='challenges') renderChallengesView();
   if(name==='battlepass') renderBattlePassView();
-  if(['customize','shop','profile'].includes(name)) updateTopbarActive(name);
+  if(['battlepass','challenges','customize','shop','profile'].includes(name)) updateTopbarActive(name);
   if(name==='customize' || name==='profile') ensurePreviewAnimating();
 }
 // Animated rank skins/halos (Unreal's hue cycle, Platinum's spinning rings, etc.) read the
@@ -2587,6 +2607,17 @@ document.getElementById('modeSelectConfirmBtn').addEventListener('click', ()=>{
   }
   closeModeSelectModal();
   renderLobbyView();
+});
+// Ranked-with-friends (real rooms + leaderboard) and plain online multiplayer (real 1v1/2v2
+// rooms) live in their existing screens (rankedView/mainMenuView) — per the request, they're
+// only ever reached from inside "Cambiar modo" now, not as their own Lobby cards.
+document.getElementById('modeSelectFriendsLink').addEventListener('click', ()=>{
+  closeModeSelectModal();
+  showSubview('ranked');
+});
+document.getElementById('modeSelectOnlineLink').addEventListener('click', ()=>{
+  closeModeSelectModal();
+  showSubview('play');
 });
 // Starts a match directly in whatever mode is currently selected — the exact same
 // resetMatch() call every pre-existing mode button (Ranked, classic arena) already uses.
