@@ -189,6 +189,13 @@ h1.title{
 .online-btn:hover{border-color:var(--build);}
 .ranked-btn{border-color:var(--gold); margin-bottom:14px; font-size:18px;}
 .ranked-btn:hover{border-color:var(--gold);}
+.challenges-btn{border-color:var(--heal); margin-bottom:14px; font-size:16px; position:relative;}
+.challenges-btn:hover{border-color:var(--heal);}
+.challenges-badge{
+  position:absolute; top:8px; right:10px; background:var(--heal); color:#04321a; font-family:'Rajdhani';
+  font-weight:700; font-size:12px; min-width:20px; height:20px; border-radius:10px; padding:0 6px;
+  display:flex; align-items:center; justify-content:center;
+}
 #rankedRankCard, #profileRankCard{
   display:flex; align-items:center; gap:16px; background:var(--surface); border:1px solid var(--line);
   border-radius:10px; padding:16px; margin-bottom:18px;
@@ -223,7 +230,7 @@ h1.title{
   width:auto; padding:8px 16px; margin-bottom:16px; font-size:13px;
   position:sticky; top:0; z-index:2; background:var(--surface);
 }
-#mainMenuView, #customizeView, #shopView, #profileView, #onlineLobbyView, #topNavView, #rankedView{
+#mainMenuView, #customizeView, #shopView, #profileView, #onlineLobbyView, #topNavView, #rankedView, #challengesView{
   max-height:78vh; overflow-y:auto; padding:1px 2px 4px;
 }
 
@@ -250,6 +257,30 @@ h1.title{
   display:grid; grid-template-columns:repeat(auto-fill,minmax(96px,1fr)); gap:10px;
   padding:2px;
 }
+
+/* ---------- challenges / missions ---------- */
+.chal-reset-label{text-transform:none; letter-spacing:0; font-weight:500; color:var(--muted); font-size:11px;}
+.chal-list{display:flex; flex-direction:column; gap:10px; margin-bottom:6px;}
+.chal-row{
+  display:flex; align-items:center; gap:12px; background:var(--surface); border:1px solid var(--line);
+  border-radius:10px; padding:12px 14px;
+}
+.chal-row.claimed{opacity:.55;}
+.chal-info{flex:1; text-align:left; min-width:0;}
+.chal-label{font-family:'Rajdhani'; font-weight:700; font-size:14px; margin-bottom:6px;}
+.chal-track{height:8px; background:var(--surface2); border:1px solid var(--line); border-radius:4px; overflow:hidden;}
+.chal-fill{height:100%; background:var(--heal); border-radius:3px; transition:width .5s ease;}
+.chal-progress-label{font-family:'Rajdhani'; font-size:11px; color:var(--muted); margin-top:4px; font-variant-numeric:tabular-nums;}
+.chal-claim-btn{
+  flex:0 0 auto; font-family:'Rajdhani'; font-weight:700; font-size:12px; letter-spacing:.03em;
+  border:1px solid var(--line); border-radius:8px; padding:8px 12px; background:var(--surface2);
+  color:var(--muted); cursor:not-allowed; white-space:nowrap;
+}
+.chal-claim-btn.ready{
+  border-color:var(--heal); color:var(--heal-ink,#04321a); background:var(--heal); cursor:pointer;
+}
+.chal-claim-btn.ready:hover{filter:brightness(1.08);}
+.chal-claim-btn.done{border-color:var(--line); color:var(--muted); background:var(--surface2);}
 .cosmetic-card{
   background:var(--surface); border:2px solid var(--line); border-radius:10px; padding:10px 8px;
   display:flex; flex-direction:column; align-items:center; gap:6px; cursor:pointer; position:relative;
@@ -528,6 +559,10 @@ h1.title{
         <span id="rankedNavRankName">RANKED · BRONZE</span>
         <span class="d">Battle Royale contra bots — Solo, Dúos o Tríos</span>
       </button>
+      <button class="mode-btn nav-btn challenges-btn" data-nav="challenges" id="challengesNavBtn">
+        DESAFÍOS<span class="d">Misiones diarias y semanales</span>
+        <span id="challengesNavBadge" class="challenges-badge hidden">0</span>
+      </button>
       <div class="modes four" id="topNavGrid">
         <button class="mode-btn nav-btn" data-nav="play">JUGAR<span class="d">Elige un modo y entra a la arena</span></button>
         <button class="mode-btn nav-btn" data-nav="customize">CUSTOMIZE<span class="d">Color y sombrero de tu personaje</span></button>
@@ -637,6 +672,15 @@ h1.title{
       </div>
       <div class="cust-section-label">EQUIPADO</div>
       <div id="profileEquippedWrap"><canvas id="profilePreview" width="120" height="120"></canvas></div>
+    </div>
+
+    <div id="challengesView" class="hidden">
+      <button class="mode-btn back-btn" data-nav="top">← VOLVER</button>
+      <p class="sub">Completa desafíos jugando partidas de verdad. El progreso se guarda solo — reclama la recompensa cuando termines uno.</p>
+      <div class="cust-section-label">DIARIOS <span class="chal-reset-label" id="dailyResetLabel"></span></div>
+      <div class="chal-list" id="dailyChalList"></div>
+      <div class="cust-section-label">SEMANALES <span class="chal-reset-label" id="weeklyResetLabel"></span></div>
+      <div class="chal-list" id="weeklyChalList"></div>
     </div>
 
     <div id="onlineLobbyView" class="hidden">
@@ -932,8 +976,9 @@ function defaultProfile(){
     coins:0, name:'Jugador'+Math.floor(1000+Math.random()*9000),
     owned: COSMETICS.filter(c=>c.default).map(c=>c.id),
     equippedColor:'color_blue', equippedHat:'hat_none', equippedHalo:'halo_none',
-    stats:{kills:0, wins:0, matchesPlayed:0},
+    stats:{kills:0, wins:0, matchesPlayed:0, damageDealt:0},
     ranked:{points:0, wins:0, kills:0, matches:0, bestPlacement:null},
+    challenges:{daily:null, weekly:null},
   };
 }
 let profile = loadProfile();
@@ -951,8 +996,11 @@ function loadProfile(){
       equippedColor: p.equippedColor || d.equippedColor,
       equippedHat: p.equippedHat || d.equippedHat,
       equippedHalo: p.equippedHalo || d.equippedHalo,
-      stats: Object.assign({kills:0,wins:0,matchesPlayed:0}, p.stats||{}),
+      stats: Object.assign({kills:0,wins:0,matchesPlayed:0,damageDealt:0}, p.stats||{}),
       ranked: Object.assign({points:0,wins:0,kills:0,matches:0,bestPlacement:null}, p.ranked||{}),
+      // Daily/weekly sets themselves are validated/regenerated by ensureChallenges() right
+      // after load — here we just carry forward whatever shape was saved, if any.
+      challenges: (p.challenges && typeof p.challenges==='object') ? p.challenges : d.challenges,
     };
   } catch(e){ return defaultProfile(); }
 }
@@ -964,6 +1012,130 @@ function ownsCosmetic(id){ return profile.owned.indexOf(id)>=0; }
 // Retroactively grants rank rewards for anyone already at/above a rank when this system
 // shipped, without making them play another match just to receive what they already earned.
 grantRankRewards(true);
+
+// ============================== CHALLENGES / MISSIONS ==============================
+// Daily + weekly missions, each tracked against one real, already-existing gameplay event
+// (a kill, damage dealt, seconds survived, a match ending, a top-X ranked finish) — nothing
+// here is UI wired to nothing. Progress accumulates automatically as you play; coins are
+// only ever granted when the player manually clicks claim on a completed mission.
+const DAILY_CHALLENGE_DEFS = [
+  {id:'d_kills',   type:'kills',   min:3,   max:7,    coinMin:15, coinMax:25,  label:t=>`Consigue ${t} eliminaciones`},
+  {id:'d_damage',  type:'damage',  min:300, max:600,  coinMin:15, coinMax:25,  label:t=>`Inflige ${t} de daño`},
+  {id:'d_survive', type:'survive', min:180, max:360,  coinMin:15, coinMax:25,  label:t=>`Sobrevive un total de ${(t/60).toFixed(1)} min en partida`},
+  {id:'d_matches', type:'matches', min:2,   max:4,    coinMin:10, coinMax:20,  label:t=>`Juega ${t} partidas`},
+  {id:'d_win',     type:'win',     min:1,   max:1,    coinMin:25, coinMax:35,  label:t=>`Gana 1 partida`},
+];
+// Weekly: fewer, harder, better-paying — but capped well below what would let cosmetics be
+// rushed (a legendary at 800 coins still needs several weeks of missions alone).
+const WEEKLY_CHALLENGE_DEFS = [
+  {id:'w_kills',   type:'kills',   min:25,  max:45,   coinMin:90,  coinMax:140, label:t=>`Consigue ${t} eliminaciones`},
+  {id:'w_damage',  type:'damage',  min:2500,max:4200, coinMin:100, coinMax:150, label:t=>`Inflige ${t} de daño`},
+  {id:'w_survive', type:'survive', min:900, max:1500, coinMin:90,  coinMax:130, label:t=>`Sobrevive un total de ${(t/60).toFixed(1)} min en partida`},
+  {id:'w_matches', type:'matches', min:10,  max:16,   coinMin:70,  coinMax:110, label:t=>`Juega ${t} partidas`},
+  {id:'w_wins',    type:'win',     min:3,   max:5,    coinMin:120, coinMax:180, label:t=>`Gana ${t} partidas`},
+  {id:'w_top5',    type:'topX',    min:3,   max:5,    coinMin:110, coinMax:170, param:5, label:t=>`Termina top 5 en Ranked ${t} veces`},
+];
+function chRandInt(min,max){ return Math.floor(min + Math.random()*(max-min+1)); }
+function chPickN(arr, n){
+  const pool = arr.slice(); const out = [];
+  while(out.length<n && pool.length) out.push(pool.splice(Math.floor(Math.random()*pool.length),1)[0]);
+  return out;
+}
+function todayKey(){
+  const d = new Date();
+  return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0');
+}
+// ISO-8601 week key (Monday-start) so the weekly reset lands on a real, stable calendar
+// boundary instead of drifting based on whenever a player first opened the game.
+function isoWeekKey(){
+  const now = new Date();
+  const dt = new Date(Date.UTC(now.getFullYear(), now.getMonth(), now.getDate()));
+  const dayNum = dt.getUTCDay() || 7;
+  dt.setUTCDate(dt.getUTCDate() + 4 - dayNum);
+  const yearStart = new Date(Date.UTC(dt.getUTCFullYear(),0,1));
+  const weekNo = Math.ceil((((dt-yearStart)/86400000)+1)/7);
+  return dt.getUTCFullYear()+'-W'+String(weekNo).padStart(2,'0');
+}
+function buildChallengeSet(defs, n){
+  return chPickN(defs, n).map(def=>{
+    const target = chRandInt(def.min, def.max);
+    return {defId:def.id, target, progress:0, claimed:false, coins:chRandInt(def.coinMin, def.coinMax)};
+  });
+}
+function challengeDefById(id){
+  return DAILY_CHALLENGE_DEFS.find(d=>d.id===id) || WEEKLY_CHALLENGE_DEFS.find(d=>d.id===id);
+}
+// Regenerates whichever set(s) have rolled past their reset boundary. Cheap and idempotent —
+// safe to call on every load and every time the challenges view (or the top nav) refreshes,
+// so a tab left open across midnight still catches the rollover.
+function ensureChallenges(){
+  if(!profile.challenges) profile.challenges = {daily:null, weekly:null};
+  let changed = false;
+  const dKey = todayKey();
+  if(!profile.challenges.daily || profile.challenges.daily.key!==dKey){
+    profile.challenges.daily = {key:dKey, items:buildChallengeSet(DAILY_CHALLENGE_DEFS, 3)};
+    changed = true;
+  }
+  const wKey = isoWeekKey();
+  if(!profile.challenges.weekly || profile.challenges.weekly.key!==wKey){
+    profile.challenges.weekly = {key:wKey, items:buildChallengeSet(WEEKLY_CHALLENGE_DEFS, 3)};
+    changed = true;
+  }
+  if(changed) saveProfile();
+}
+// Adds `amount` progress to every not-yet-completed mission of `type`, daily and weekly
+// alike. For type 'topX', opts.placement must be provided — only missions whose target
+// "top N" is at least as generous as the actual finish (placement <= def.param) advance.
+function trackChallengeProgress(type, amount, opts){
+  if(!profile.challenges) return;
+  let changed = false;
+  [profile.challenges.daily, profile.challenges.weekly].forEach(set=>{
+    if(!set) return;
+    set.items.forEach(item=>{
+      if(item.claimed || item.progress>=item.target) return;
+      const def = challengeDefById(item.defId);
+      if(!def || def.type!==type) return;
+      if(type==='topX' && (!opts || opts.placement==null || opts.placement>def.param)) return;
+      item.progress = Math.min(item.target, item.progress+amount);
+      changed = true;
+    });
+  });
+  if(changed) saveProfile();
+}
+function claimableChallengeCount(){
+  if(!profile.challenges) return 0;
+  let n = 0;
+  [profile.challenges.daily, profile.challenges.weekly].forEach(set=>{
+    if(!set) return;
+    set.items.forEach(item=>{ if(!item.claimed && item.progress>=item.target) n++; });
+  });
+  return n;
+}
+function claimChallenge(scope, idx){
+  const set = profile.challenges && profile.challenges[scope];
+  if(!set) return;
+  const item = set.items[idx];
+  if(!item || item.claimed || item.progress<item.target) return;
+  item.claimed = true;
+  profile.coins += item.coins;
+  saveProfile();
+  refreshTopNavSummary();
+  showToast('DESAFÍO COMPLETADO  +'+item.coins+' 🪙');
+  renderChallengesView();
+}
+// Accumulates the local player's own alive time during a real (non-practice) match into
+// whole-second ticks for the 'survive' mission type — called from the main loop.
+let _surviveAccumMs = 0;
+function updateChallengeSurvival(dt){
+  if(isSpectating || mode==='practice' || !running || !player.alive) { _surviveAccumMs = 0; return; }
+  _surviveAccumMs += dt*1000;
+  if(_surviveAccumMs>=1000){
+    const wholeSecs = Math.floor(_surviveAccumMs/1000);
+    _surviveAccumMs -= wholeSecs*1000;
+    trackChallengeProgress('survive', wholeSecs);
+  }
+}
+ensureChallenges();
 
 // ============================== STATE ==============================
 const canvas = document.getElementById('game');
@@ -1533,6 +1705,7 @@ const SUBVIEWS = {
   shop: document.getElementById('shopView'),
   profile: document.getElementById('profileView'),
   ranked: document.getElementById('rankedView'),
+  challenges: document.getElementById('challengesView'),
 };
 
 function refreshTopNavSummary(){
@@ -1541,6 +1714,10 @@ function refreshTopNavSummary(){
   document.getElementById('navWins').textContent = profile.stats.wins;
   const tier = rankTierFor(profile.ranked.points);
   document.getElementById('rankedNavRankName').textContent = 'RANKED · '+tier.name.toUpperCase();
+  ensureChallenges();
+  const claimable = claimableChallengeCount();
+  document.getElementById('challengesNavBadge').textContent = claimable;
+  document.getElementById('challengesNavBadge').classList.toggle('hidden', claimable<=0);
 }
 function showSubview(name){
   topNavView.classList.add('hidden');
@@ -1551,6 +1728,7 @@ function showSubview(name){
   if(name==='shop') renderShopView();
   if(name==='profile') renderProfileView();
   if(name==='ranked') renderRankedView();
+  if(name==='challenges') renderChallengesView();
   if(name==='customize' || name==='profile') ensurePreviewAnimating();
 }
 // Animated rank skins/halos (Unreal's hue cycle, Platinum's spinning rings, etc.) read the
@@ -1808,6 +1986,40 @@ function renderProfileView(){
   document.getElementById('profileRankProgressLabel').textContent = prog.tier.max===Infinity
     ? Math.round(profile.ranked.points)+' pts (rango máximo)'
     : Math.round(profile.ranked.points)+' pts · faltan '+Math.round(prog.toNext)+' para el siguiente rango';
+}
+
+function challengeRowHtml(scope, idx, item){
+  const def = challengeDefById(item.defId);
+  if(!def) return '';
+  const pct = Math.min(100, Math.round((item.progress/item.target)*100));
+  const done = item.progress>=item.target;
+  const progLabel = def.type==='survive'
+    ? (item.progress/60).toFixed(1)+' / '+(item.target/60).toFixed(1)+' min'
+    : Math.min(item.progress,item.target)+' / '+item.target;
+  let btn;
+  if(item.claimed) btn = `<button class="chal-claim-btn done" disabled>RECLAMADO ✓</button>`;
+  else if(done) btn = `<button class="chal-claim-btn ready" data-scope="${scope}" data-idx="${idx}">RECLAMAR +${item.coins} 🪙</button>`;
+  else btn = `<button class="chal-claim-btn" disabled>+${item.coins} 🪙</button>`;
+  return `<div class="chal-row ${item.claimed?'claimed':''}">
+    <div class="chal-info">
+      <div class="chal-label">${def.label(item.target)}</div>
+      <div class="chal-track"><div class="chal-fill" style="width:${pct}%"></div></div>
+      <div class="chal-progress-label">${progLabel}</div>
+    </div>
+    ${btn}
+  </div>`;
+}
+function renderChallengesView(){
+  ensureChallenges();
+  document.getElementById('dailyResetLabel').textContent = '(se reinician a medianoche)';
+  document.getElementById('weeklyResetLabel').textContent = '(se reinician cada lunes)';
+  const d = profile.challenges.daily, w = profile.challenges.weekly;
+  document.getElementById('dailyChalList').innerHTML = d.items.map((it,i)=>challengeRowHtml('daily',i,it)).join('');
+  document.getElementById('weeklyChalList').innerHTML = w.items.map((it,i)=>challengeRowHtml('weekly',i,it)).join('');
+  document.querySelectorAll('.chal-claim-btn.ready').forEach(btn=>{
+    btn.addEventListener('click', ()=> claimChallenge(btn.dataset.scope, Number(btn.dataset.idx)));
+  });
+  refreshTopNavSummary();
 }
 
 function renderRankedView(){
@@ -2411,6 +2623,7 @@ function damageFighter(target, dmg, hitX, hitY, attacker, fromNetwork){
   }
   target.hp -= remaining;
   target.lastHitTime = time;
+  if(attacker===player){ profile.stats.damageDealt += dmg; trackChallengeProgress('damage', dmg); }
   spawnSparks(hitX,hitY, target===player? '#ff8a5c':'#ff5c74', 8);
   floatTexts.push({x:hitX,y:hitY,txt:'-'+Math.round(dmg),t:0,color: attacker&&attacker.isBot? '#ff3b5c':'#ffd166'});
   if(mode==='online' && target!==player && !fromNetwork){
@@ -2443,6 +2656,7 @@ function damageFighter(target, dmg, hitX, hitY, attacker, fromNetwork){
 function awardElimination(){
   profile.coins += KILL_COIN_REWARD;
   profile.stats.kills++;
+  trackChallengeProgress('kills', 1);
   if(isAnyRankedMatch() && rankedMatch && !rankedMatch.ended){
     profile.ranked.points += KILL_RANKED_POINTS;
     rankedMatch.eliminationPoints += KILL_RANKED_POINTS;
@@ -2478,6 +2692,8 @@ function checkWinner(attacker){
     profile.stats.matchesPlayed++;
     if(winner==='player') profile.stats.wins++;
     saveProfile();
+    trackChallengeProgress('matches', 1);
+    if(winner==='player') trackChallengeProgress('win', 1);
     setTimeout(showEndScreen, 900);
   }
 }
@@ -2553,6 +2769,10 @@ function applyRankedMatchEnd(placement){
   profile.ranked.kills += player.kills;
   if(placement===1) profile.ranked.wins++;
   if(profile.ranked.bestPlacement==null || placement<profile.ranked.bestPlacement) profile.ranked.bestPlacement = placement;
+  // Ranked matches previously never touched profile.stats — meaning the Profile screen's
+  // "partidas jugadas"/"victorias" cards silently excluded every Ranked game. Count them too.
+  profile.stats.matchesPlayed++;
+  if(placement===1) profile.stats.wins++;
   rankedMatch.placement = placement;
   rankedMatch.beforePoints = Math.max(0, beforePoints);
   rankedMatch.afterPoints = profile.ranked.points;
@@ -2561,6 +2781,9 @@ function applyRankedMatchEnd(placement){
   rankedMatch.rankedUp = rankTierIndex(rankedMatch.afterTier.id) > rankTierIndex(rankedMatch.beforeTier.id);
   saveProfile();
   grantRankRewards();
+  trackChallengeProgress('matches', 1);
+  if(placement===1) trackChallengeProgress('win', 1);
+  trackChallengeProgress('topX', 1, {placement});
   setTimeout(showRankedResultsScreen, 900);
 }
 
@@ -4161,6 +4384,7 @@ function loop(now){
     updatePickups();
     matsRegen(dt);
     updateRankedZone(dt);
+    updateChallengeSurvival(dt);
     sendMyStateIfDue();
     sendBotStatesIfDue();
   }
