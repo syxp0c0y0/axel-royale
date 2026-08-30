@@ -75,6 +75,8 @@ html,body{
 }
 #rankedPointsLine{font-family:'Rajdhani'; font-weight:700; font-size:14px; letter-spacing:.05em; color:var(--gold); text-transform:uppercase;}
 #rankedPointsLine span{font-variant-numeric:tabular-nums;}
+#rankedPointsLine.unscored{color:var(--muted);}
+#rankedPointsLine.unscored #rkPoints{display:none;}
 #rankedStatsRow{display:flex; gap:14px; justify-content:flex-end; margin-top:8px;}
 .rk-stat{display:flex; flex-direction:column; align-items:center; font-family:'Rajdhani';}
 .rk-stat .v{font-size:18px; font-weight:700; color:var(--ink); font-variant-numeric:tabular-nums;}
@@ -336,19 +338,66 @@ h1.title{
 /* ---------- mode-select modal ---------- */
 .modal-overlay{z-index:30; background:rgba(6,8,13,0.72); backdrop-filter:blur(2px);}
 .modal-panel{width:min(480px,92vw); padding:32px 28px;}
+.modal-panel-wide{width:min(600px,94vw); max-height:88vh; overflow-y:auto;}
 .modal-title{
-  font-family:'Rajdhani'; font-weight:700; font-size:28px; margin:0 0 18px; letter-spacing:.02em;
+  font-family:'Rajdhani'; font-weight:700; font-size:28px; margin:0 0 14px; letter-spacing:.02em;
 }
-.mode-select-grid{display:grid; grid-template-columns:repeat(3,1fr); gap:10px; margin-bottom:20px;}
+.mode-select-section-label{
+  font-family:'Rajdhani'; font-weight:700; font-size:11px; letter-spacing:.15em; color:var(--muted);
+  text-align:left; margin:16px 0 8px; text-transform:uppercase;
+}
+.mode-select-section-label:first-of-type{margin-top:0;}
+.mode-select-grid{display:grid; grid-template-columns:repeat(3,1fr); gap:10px; margin-bottom:4px;}
+.mode-select-grid-2{grid-template-columns:1fr 1fr;}
+.mode-select-grid-1{grid-template-columns:1fr;}
 .mode-select-card{
   background:var(--surface); border:2px solid var(--line); border-radius:10px; padding:14px 8px;
-  cursor:pointer; transition:border-color .15s, transform .1s;
+  cursor:pointer; transition:border-color .15s, transform .1s; text-align:center;
 }
 .mode-select-card:hover{transform:translateY(-2px);}
 .mode-select-card.selected{border-color:var(--build); background:var(--surface2); box-shadow:0 0 0 1px var(--build);}
+.mode-select-card-alt.selected{border-color:var(--heal); box-shadow:0 0 0 1px var(--heal);}
 .msc-title{font-family:'Rajdhani'; font-weight:700; font-size:16px; margin-bottom:6px;}
 .msc-desc{font-family:'Inter'; font-size:11px; color:var(--muted); line-height:1.3;}
-.modal-btn-row{display:flex; gap:10px; justify-content:center;}
+.msc-subrow{display:flex; gap:6px; justify-content:center; margin-top:10px;}
+.msc-chip{
+  font-family:'Rajdhani'; font-weight:700; font-size:11px; letter-spacing:.03em; padding:5px 9px;
+  border:1px solid var(--line); border-radius:6px; background:var(--surface2); color:var(--muted); cursor:pointer;
+}
+.msc-chip.active{border-color:var(--heal); color:var(--ink); background:rgba(107,255,160,0.12);}
+.modal-btn-row{display:flex; gap:10px; justify-content:center; margin-top:22px;}
+
+/* ---------- Ranked ON/OFF toggle ---------- */
+#rankedToggleRow{
+  display:flex; align-items:center; justify-content:space-between; gap:12px;
+  background:var(--surface); border:1px solid var(--line); border-radius:10px; padding:12px 14px; margin:14px 0 0;
+}
+.rt-title{font-family:'Rajdhani'; font-weight:700; font-size:14px; letter-spacing:.08em; color:var(--gold);}
+.rt-desc{font-family:'Inter'; font-size:11px; color:var(--muted); margin-top:2px; max-width:280px;}
+.ranked-toggle-btn{
+  display:flex; align-items:center; gap:8px; background:transparent; border:none; cursor:pointer; padding:2px;
+  flex:0 0 auto;
+}
+.rt-pill{
+  position:relative; width:40px; height:22px; border-radius:11px; background:var(--surface2);
+  border:1px solid var(--line); transition:background .18s, border-color .18s; flex:0 0 auto;
+}
+.rt-pill-knob{
+  position:absolute; top:2px; left:2px; width:16px; height:16px; border-radius:50%; background:var(--muted);
+  transition:transform .18s, background .18s;
+}
+.ranked-toggle-btn[data-on="true"] .rt-pill{background:rgba(255,207,92,0.18); border-color:var(--gold);}
+.ranked-toggle-btn[data-on="true"] .rt-pill-knob{transform:translateX(18px); background:var(--gold);}
+.rt-state-label{font-family:'Rajdhani'; font-weight:700; font-size:12px; letter-spacing:.05em; color:var(--muted); min-width:70px; text-align:left;}
+.ranked-toggle-btn[data-on="true"] .rt-state-label{color:var(--gold);}
+
+/* ---------- Lobby mode card's Ranked tag ---------- */
+#lobbyModeRankedTag{
+  display:inline-block; margin-top:6px; font-family:'Rajdhani'; font-weight:700; font-size:11px;
+  letter-spacing:.05em; color:var(--gold); background:rgba(255,207,92,0.12); border:1px solid rgba(255,207,92,0.4);
+  border-radius:6px; padding:3px 8px;
+}
+#lobbyModeRankedTag.off{color:var(--muted); background:var(--surface2); border-color:var(--line);}
 .cosmetic-card{
   background:var(--surface); border:2px solid var(--line); border-radius:10px; padding:10px 8px;
   display:flex; flex-direction:column; align-items:center; gap:6px; cursor:pointer; position:relative;
@@ -470,6 +519,10 @@ h1.title{
 .end-actions #endMenuBtn{width:auto; padding:10px 28px; font-size:14px; margin:0;}
 
 /* ---------- ranked results ---------- */
+#rkUnscoredNote{
+  font-family:'Rajdhani'; font-size:13px; color:var(--muted); background:var(--surface);
+  border:1px solid var(--line); border-radius:8px; padding:10px 14px; margin:0 0 18px;
+}
 #rkPointsBreakdown{
   background:var(--surface); border:1px solid var(--line); border-radius:10px;
   padding:14px 18px; margin:0 0 22px; text-align:left;
@@ -584,7 +637,7 @@ h1.title{
 </div>
 
 <div id="rankedHud" class="hidden">
-  <div id="rankedPointsLine">RANKED POINTS: <span id="rkPoints">0</span></div>
+  <div id="rankedPointsLine"><span id="rankedPointsLabel">RANKED POINTS:</span> <span id="rkPoints">0</span></div>
   <div id="rankedStatsRow">
     <div class="rk-stat"><span class="v" id="rkKills">0</span><span class="l">Bajas</span></div>
     <div class="rk-stat"><span class="v" id="rkPlayersLeft">0</span><span class="l">Jugadores</span></div>
@@ -644,6 +697,7 @@ h1.title{
           <div class="cust-section-label" style="margin:0 0 4px;">MODO SELECCIONADO</div>
           <div id="lobbyModeName">Solo</div>
           <div id="lobbyModeDesc" class="sub" style="margin:2px 0 0;"></div>
+          <div id="lobbyModeRankedTag" class="hidden">RANKED: ACTIVADO</div>
         </div>
         <button class="mode-btn" id="lobbyChangeModeBtn">CAMBIAR MODO</button>
       </div>
@@ -832,9 +886,11 @@ h1.title{
 </div>
 
 <div class="overlay modal-overlay hidden" id="modeSelectModal">
-  <div class="panel modal-panel">
+  <div class="panel modal-panel modal-panel-wide">
     <div class="eyebrow">ELEGIR MODO</div>
-    <h2 class="modal-title">BATTLE ROYALE</h2>
+    <h2 class="modal-title">MODOS DE JUEGO</h2>
+
+    <div class="mode-select-section-label">BATTLE ROYALE</div>
     <div class="mode-select-grid" id="modeSelectGrid">
       <div class="mode-select-card" data-mode-select="rankedSolo">
         <div class="msc-title">SOLO</div>
@@ -849,6 +905,43 @@ h1.title{
         <div class="msc-desc">Tú + 2 aliados bot vs 5 equipos de 3</div>
       </div>
     </div>
+
+    <div id="rankedToggleRow">
+      <div id="rankedToggleInfo">
+        <div class="rt-title">RANKED</div>
+        <div class="rt-desc" id="rankedToggleDesc">Afecta tu rango y tus puntos competitivos</div>
+      </div>
+      <button type="button" id="rankedToggleBtn" class="ranked-toggle-btn" data-on="true">
+        <span class="rt-pill"><span class="rt-pill-knob"></span></span>
+        <span class="rt-state-label">ACTIVADO</span>
+      </button>
+    </div>
+
+    <div class="mode-select-section-label">COMBATE / ARENA</div>
+    <div class="mode-select-grid mode-select-grid-2">
+      <div class="mode-select-card mode-select-card-alt" data-mode-select="normal" id="oneVOneCard">
+        <div class="msc-title">1V1</div>
+        <div class="msc-desc">Duelo de construcción y disparos contra un bot</div>
+        <div class="msc-subrow" id="oneVOneDiffRow">
+          <button type="button" class="msc-chip" data-diff="easy">FÁCIL</button>
+          <button type="button" class="msc-chip" data-diff="normal">NORMAL</button>
+          <button type="button" class="msc-chip" data-diff="hard">DIFÍCIL</button>
+        </div>
+      </div>
+      <div class="mode-select-card mode-select-card-alt" data-mode-select="2v2normal">
+        <div class="msc-title">2V2</div>
+        <div class="msc-desc">Tú + 1 aliado bot vs 2 bots rivales</div>
+      </div>
+    </div>
+
+    <div class="mode-select-section-label">PRÁCTICA</div>
+    <div class="mode-select-grid mode-select-grid-1">
+      <div class="mode-select-card mode-select-card-alt" data-mode-select="practice">
+        <div class="msc-title">PRÁCTICA LIBRE</div>
+        <div class="msc-desc">Sin rival — munición y materiales infinitos</div>
+      </div>
+    </div>
+
     <div class="modal-btn-row">
       <button class="mode-btn" id="modeSelectCancelBtn" style="width:auto;">CANCELAR</button>
       <button class="mode-btn ranked-btn" id="modeSelectConfirmBtn" style="width:auto;">CONFIRMAR</button>
@@ -879,6 +972,7 @@ h1.title{
     <div class="stat-row">
       <div class="stat"><div class="v" id="rkResKills">0</div><div class="l">Eliminations</div></div>
     </div>
+    <div id="rkUnscoredNote" class="hidden">Partida normal — no afectó tu rango ni tus puntos competitivos.</div>
     <div id="rkPointsBreakdown">
       <div class="rk-line"><span>Elimination Points</span><span id="rkElimPts">+0</span></div>
       <div class="rk-line"><span>Placement Points</span><span id="rkPlacePts">+0</span></div>
@@ -897,7 +991,7 @@ h1.title{
       <div class="rankup-title">RANK UP!</div>
       <div class="rankup-sub" id="rankUpSub">GOLD → PLATINUM</div>
     </div>
-    <button class="mode-btn" id="rankedResultsMenuBtn" style="margin-top:16px;">Volver al menú Ranked</button>
+    <button class="mode-btn" id="rankedResultsMenuBtn" style="margin-top:16px;">Volver al Lobby</button>
   </div>
 </div>
 
@@ -1118,6 +1212,8 @@ function defaultProfile(){
     ranked:{points:0, wins:0, kills:0, matches:0, bestPlacement:null},
     challenges:{daily:null, weekly:null},
     selectedRankedMode:'rankedSolo',
+    rankedToggleOn:true,
+    oneVOneDiff:'normal',
   };
 }
 let profile = loadProfile();
@@ -1140,9 +1236,13 @@ function loadProfile(){
       // Daily/weekly sets themselves are validated/regenerated by ensureChallenges() right
       // after load — here we just carry forward whatever shape was saved, if any.
       challenges: (p.challenges && typeof p.challenges==='object') ? p.challenges : d.challenges,
-      // Checked against a literal list, not RANKED_MODE_CONFIG — that const is declared
-      // further down the file and loadProfile() runs immediately at script start.
-      selectedRankedMode: ['rankedSolo','rankedDuos','rankedTrios'].includes(p.selectedRankedMode)? p.selectedRankedMode : d.selectedRankedMode,
+      // Checked against a literal list, not RANKED_MODE_CONFIG/DIFF — those consts are
+      // declared further down the file and loadProfile() runs immediately at script start.
+      // Covers every mode the unified mode-select modal can pick: the 3 Battle Royale
+      // sizes plus the pre-existing classic 1v1/2v2/practice modes.
+      selectedRankedMode: ['rankedSolo','rankedDuos','rankedTrios','practice','easy','normal','hard','2v2normal'].includes(p.selectedRankedMode)? p.selectedRankedMode : d.selectedRankedMode,
+      rankedToggleOn: typeof p.rankedToggleOn==='boolean'? p.rankedToggleOn : d.rankedToggleOn,
+      oneVOneDiff: ['easy','normal','hard'].includes(p.oneVOneDiff)? p.oneVOneDiff : d.oneVOneDiff,
     };
   } catch(e){ return defaultProfile(); }
 }
@@ -1387,9 +1487,13 @@ function setupRankedMatch(m){
   const cfg = RANKED_MODE_CONFIG[m];
   const tier = rankTierFor(profile.ranked.points);
   activeBotDiff = RANKED_BOT_DIFF[tier.id] || RANKED_BOT_DIFF.bronze;
-  const entryCost = RANKED_ENTRY_COST[tier.id]||0;
-  profile.ranked.points = Math.max(0, profile.ranked.points-entryCost);
-  saveProfile();
+  // Ranked ON/OFF (mode-select modal): local Solo/Dúos/Tríos vs bots can be played as a
+  // normal, unscored match — same map/bots/zone, just no entry cost and no effect on
+  // profile.ranked.*. Ranked-with-friends (setupOnlineRankedMatch) is never affected by
+  // this toggle — that path is always scored, same as before this system existed.
+  const scored = profile.rankedToggleOn !== false;
+  const entryCost = scored? (RANKED_ENTRY_COST[tier.id]||0) : 0;
+  if(scored){ profile.ranked.points = Math.max(0, profile.ranked.points-entryCost); saveProfile(); }
 
   player.team = 0;
   activeFighters = [player];
@@ -1414,7 +1518,7 @@ function setupRankedMatch(m){
   }
 
   rankedMatch = {
-    modeCfg:cfg, tier, entryCost,
+    modeCfg:cfg, tier, entryCost, scored,
     milestonesHit:new Set(), placementPoints:0, eliminationPoints:0,
     pointsThisMatch:-entryCost, ended:false, placement:null, afterTier:null, rankedUp:false,
   };
@@ -1483,7 +1587,9 @@ function setupOnlineRankedMatch(){
   }
 
   rankedMatch = {
-    modeCfg:cfg, tier, entryCost,
+    // Ranked-with-friends is never affected by the Lobby's local Ranked ON/OFF toggle —
+    // this path is always scored, exactly as it always has been.
+    modeCfg:cfg, tier, entryCost, scored:true,
     milestonesHit:new Set(), placementPoints:0, eliminationPoints:0,
     pointsThisMatch:-entryCost, ended:false, placement:null, afterTier:null, rankedUp:false,
   };
@@ -2135,17 +2241,24 @@ function renderShopView(){
   });
 }
 
-// Short descriptions for the mode-select modal and the Lobby's "selected mode" summary —
-// same wording rankedView's own Solo/Dúos/Tríos buttons already use, so the numbers never
-// drift between the two places a player can read them.
-const RANKED_MODE_DESC = {
-  rankedSolo:  'Tú contra 15 rivales individuales',
-  rankedDuos:  'Tú + 1 aliado bot vs 7 equipos de 2',
-  rankedTrios: 'Tú + 2 aliados bot vs 5 equipos de 3',
+// Every mode the unified mode-select modal can launch, both the Battle Royale sizes and
+// the pre-existing classic 1v1/2v2/practice modes — one lookup so the Lobby's "selected
+// mode" summary and the modal never drift out of sync on labels/descriptions. `category`
+// drives whether the Ranked ON/OFF toggle is shown ('br' only — it has no meaning for the
+// classic arena/practice modes, which were never ranked to begin with).
+const MODE_META = {
+  rankedSolo:  {label:'Solo',  desc:'Tú contra 15 rivales individuales',              category:'br'},
+  rankedDuos:  {label:'Dúos',  desc:'Tú + 1 aliado bot vs 7 equipos de 2',            category:'br'},
+  rankedTrios: {label:'Tríos', desc:'Tú + 2 aliados bot vs 5 equipos de 3',           category:'br'},
+  easy:        {label:'1v1 · Bot Fácil',   desc:'Reacciones lentas, poca puntería',   category:'arena'},
+  normal:      {label:'1v1 · Bot Normal',  desc:'Construye y ataca con criterio',     category:'arena'},
+  hard:        {label:'1v1 · Bot Difícil', desc:'Puntería alta, se cubre sin parar',  category:'arena'},
+  '2v2normal': {label:'2v2 · Contra Bots', desc:'Tú + 1 aliado bot vs 2 bots rivales',category:'arena'},
+  practice:    {label:'Práctica libre',    desc:'Sin rival — munición y materiales infinitos', category:'practice'},
 };
 // The Lobby hub: a live character preview (exactly what CUSTOMIZE/PROFILE already draw —
 // same profile.equippedColor/Hat/Halo, so equipping something new shows up here too), the
-// player's current rank badge, and the currently selected Battle Royale mode/JUGAR button.
+// player's current rank badge, and the currently selected mode/JUGAR button.
 function renderLobbyView(){
   document.getElementById('lobbyNameLine').textContent = displayName(profile.name);
   drawPreviewCanvas(document.getElementById('lobbyPreview'));
@@ -2158,20 +2271,43 @@ function renderLobbyView(){
   // touch that ties "who you are" (rank) into the hub's visual identity.
   document.getElementById('lobbyStage').style.setProperty('--lobby-accent', rankVisualColor(prog.tier)+'33');
 
-  const modeCfg = RANKED_MODE_CONFIG[profile.selectedRankedMode] || RANKED_MODE_CONFIG.rankedSolo;
-  document.getElementById('lobbyModeName').textContent = modeCfg.label;
-  document.getElementById('lobbyModeDesc').textContent = RANKED_MODE_DESC[profile.selectedRankedMode] || '';
+  const meta = MODE_META[profile.selectedRankedMode] || MODE_META.rankedSolo;
+  document.getElementById('lobbyModeName').textContent = meta.label;
+  document.getElementById('lobbyModeDesc').textContent = meta.desc;
+  const rankedTag = document.getElementById('lobbyModeRankedTag');
+  rankedTag.classList.toggle('hidden', meta.category!=='br');
+  rankedTag.textContent = 'RANKED: '+(profile.rankedToggleOn!==false? 'ACTIVADO':'DESACTIVADO');
+  rankedTag.classList.toggle('off', profile.rankedToggleOn===false);
 }
 
-// ---- Mode-select modal: pick Solo/Dúos/Tríos, confirm, and return to the Lobby showing
-// the chosen mode — the selection only commits to profile.selectedRankedMode on confirm,
-// so cancelling leaves whatever was already selected untouched. ----
+// ---- Mode-select modal: pick a mode (Battle Royale, Arena, or Práctica), optionally
+// toggle Ranked for BR modes, confirm, and return to the Lobby showing the choice — nothing
+// commits to `profile` until CONFIRMAR, so CANCELAR always leaves the prior state untouched. ----
 let modeSelectPending = null;
+let rankedTogglePending = true;
+function applyOneVOneChipState(activeDiff){
+  const card = document.getElementById('oneVOneCard');
+  card.dataset.modeSelect = activeDiff;
+  card.querySelectorAll('[data-diff]').forEach(chip=> chip.classList.toggle('active', chip.dataset.diff===activeDiff));
+}
+function updateRankedToggleVisual(on){
+  const btn = document.getElementById('rankedToggleBtn');
+  btn.dataset.on = on? 'true' : 'false';
+  btn.querySelector('.rt-state-label').textContent = on? 'ACTIVADO' : 'DESACTIVADO';
+  document.getElementById('rankedToggleDesc').textContent = on
+    ? 'Afecta tu rango y tus puntos competitivos'
+    : 'Partida normal — no afecta tu rango ni tus puntos';
+}
 function openModeSelectModal(){
   modeSelectPending = profile.selectedRankedMode;
+  rankedTogglePending = profile.rankedToggleOn !== false;
+  applyOneVOneChipState(profile.oneVOneDiff || 'normal');
   document.querySelectorAll('.mode-select-card').forEach(card=>{
     card.classList.toggle('selected', card.dataset.modeSelect===modeSelectPending);
   });
+  updateRankedToggleVisual(rankedTogglePending);
+  const meta = MODE_META[modeSelectPending] || MODE_META.rankedSolo;
+  document.getElementById('rankedToggleRow').classList.toggle('hidden', meta.category!=='br');
   document.getElementById('modeSelectModal').classList.remove('hidden');
 }
 function closeModeSelectModal(){
@@ -2182,16 +2318,41 @@ document.querySelectorAll('.mode-select-card').forEach(card=>{
   card.addEventListener('click', ()=>{
     modeSelectPending = card.dataset.modeSelect;
     document.querySelectorAll('.mode-select-card').forEach(c=> c.classList.toggle('selected', c===card));
+    const meta = MODE_META[modeSelectPending] || MODE_META.rankedSolo;
+    document.getElementById('rankedToggleRow').classList.toggle('hidden', meta.category!=='br');
   });
+});
+// Difficulty chips inside the 1v1 card: picking one updates the card's own underlying mode
+// (and, if the card is already the active selection, the pending choice too) without the
+// bubbled click re-selecting a *different* card by mistake.
+document.querySelectorAll('#oneVOneDiffRow [data-diff]').forEach(chip=>{
+  chip.addEventListener('click', (e)=>{
+    e.stopPropagation();
+    applyOneVOneChipState(chip.dataset.diff);
+    const card = document.getElementById('oneVOneCard');
+    card.classList.add('selected');
+    document.querySelectorAll('.mode-select-card').forEach(c=>{ if(c!==card) c.classList.remove('selected'); });
+    modeSelectPending = chip.dataset.diff;
+    document.getElementById('rankedToggleRow').classList.add('hidden'); // 1v1 is never Ranked
+  });
+});
+document.getElementById('rankedToggleBtn').addEventListener('click', ()=>{
+  rankedTogglePending = !rankedTogglePending;
+  updateRankedToggleVisual(rankedTogglePending);
 });
 document.getElementById('modeSelectCancelBtn').addEventListener('click', closeModeSelectModal);
 document.getElementById('modeSelectConfirmBtn').addEventListener('click', ()=>{
-  if(modeSelectPending){ profile.selectedRankedMode = modeSelectPending; saveProfile(); }
+  if(modeSelectPending){
+    profile.selectedRankedMode = modeSelectPending;
+    profile.rankedToggleOn = rankedTogglePending;
+    if(['easy','normal','hard'].includes(modeSelectPending)) profile.oneVOneDiff = modeSelectPending;
+    saveProfile();
+  }
   closeModeSelectModal();
   renderLobbyView();
 });
-// Starts a match directly in whatever Battle Royale mode is currently selected — the exact
-// same resetMatch() call the rankedView Solo/Dúos/Tríos buttons already use.
+// Starts a match directly in whatever mode is currently selected — the exact same
+// resetMatch() call every pre-existing mode button (Ranked, classic arena) already uses.
 document.getElementById('lobbyPlayBtn').addEventListener('click', ()=>{
   document.getElementById('startScreen').classList.add('hidden');
   resetMatch(profile.selectedRankedMode);
@@ -2888,7 +3049,7 @@ function awardElimination(){
   profile.coins += KILL_COIN_REWARD;
   profile.stats.kills++;
   trackChallengeProgress('kills', 1);
-  if(isAnyRankedMatch() && rankedMatch && !rankedMatch.ended){
+  if(isAnyRankedMatch() && rankedMatch && !rankedMatch.ended && rankedMatch.scored){
     profile.ranked.points += KILL_RANKED_POINTS;
     rankedMatch.eliminationPoints += KILL_RANKED_POINTS;
     rankedMatch.pointsThisMatch += KILL_RANKED_POINTS;
@@ -2969,6 +3130,7 @@ function updateRankedMilestones(remaining){
 // the authority, and replayed by every other human client off the host's 'rk' broadcast.
 function applyRankedMilestone(thresh, pts){
   if(!rankedMatch || rankedMatch.milestonesHit.has(thresh)) return;
+  if(!rankedMatch.scored) return; // Ranked OFF: play the same match, skip the points/toast
   rankedMatch.milestonesHit.add(thresh);
   rankedMatch.placementPoints += pts;
   rankedMatch.pointsThisMatch += pts;
@@ -2989,19 +3151,26 @@ function applyRankedMatchEnd(placement){
   if(!rankedMatch || rankedMatch.ended) return;
   rankedMatch.ended = true;
   running = false;
+  const scored = rankedMatch.scored;
+  // Ranked OFF: same match, same placement — just never touches profile.ranked.* (points,
+  // matches, wins, kills, bestPlacement) or the entry cost/milestone points already skipped
+  // during the match. beforePoints/afterPoints/tier end up identical, so the results screen's
+  // rank-progress bar naturally shows "no change" without any extra branching there.
   const beforePoints = profile.ranked.points - rankedMatch.pointsThisMatch; // pointsThisMatch so far = -entryCost + placement milestones hit mid-match
-  if(placement===1){
-    rankedMatch.placementPoints += 50;
-    rankedMatch.pointsThisMatch += 50;
-    profile.ranked.points += 50;
+  if(scored){
+    if(placement===1){
+      rankedMatch.placementPoints += 50;
+      rankedMatch.pointsThisMatch += 50;
+      profile.ranked.points += 50;
+    }
+    profile.ranked.points = Math.max(0, profile.ranked.points);
+    profile.ranked.matches++;
+    profile.ranked.kills += player.kills;
+    if(placement===1) profile.ranked.wins++;
+    if(profile.ranked.bestPlacement==null || placement<profile.ranked.bestPlacement) profile.ranked.bestPlacement = placement;
   }
-  profile.ranked.points = Math.max(0, profile.ranked.points);
-  profile.ranked.matches++;
-  profile.ranked.kills += player.kills;
-  if(placement===1) profile.ranked.wins++;
-  if(profile.ranked.bestPlacement==null || placement<profile.ranked.bestPlacement) profile.ranked.bestPlacement = placement;
-  // Ranked matches previously never touched profile.stats — meaning the Profile screen's
-  // "partidas jugadas"/"victorias" cards silently excluded every Ranked game. Count them too.
+  // profile.stats is the general "how much have you played" record, not ranked-specific —
+  // it counts every match, scored or not (matches how the classic 1v1/2v2 modes already work).
   profile.stats.matchesPlayed++;
   if(placement===1) profile.stats.wins++;
   rankedMatch.placement = placement;
@@ -3011,10 +3180,10 @@ function applyRankedMatchEnd(placement){
   rankedMatch.afterTier = rankTierFor(profile.ranked.points);
   rankedMatch.rankedUp = rankTierIndex(rankedMatch.afterTier.id) > rankTierIndex(rankedMatch.beforeTier.id);
   saveProfile();
-  grantRankRewards();
+  if(scored) grantRankRewards();
   trackChallengeProgress('matches', 1);
   if(placement===1) trackChallengeProgress('win', 1);
-  trackChallengeProgress('topX', 1, {placement});
+  if(scored) trackChallengeProgress('topX', 1, {placement});
   setTimeout(showRankedResultsScreen, 900);
 }
 
@@ -4390,6 +4559,12 @@ function updateHUDStatic(){
   const ranked = isAnyRankedMatch();
   document.getElementById('topRight').classList.toggle('hidden', ranked);
   document.getElementById('rankedHud').classList.toggle('hidden', !ranked);
+  // Ranked OFF (Lobby toggle): same Battle Royale HUD, but the points line makes clear
+  // this particular match won't touch your rank.
+  const unscored = ranked && rankedMatch && !rankedMatch.scored;
+  document.getElementById('rankedPointsLine').classList.toggle('unscored', unscored);
+  document.getElementById('rankedPointsLabel').textContent = unscored? 'PARTIDA NORMAL — NO AFECTA TU RANGO' : 'RANKED POINTS:';
+  document.getElementById('rankedMatchGain').classList.toggle('hidden', unscored);
   document.getElementById('spectateHint').classList.toggle('hidden', !isSpectating);
   document.getElementById('spectateHintRanked').classList.toggle('hidden', !isSpectating);
   const mapTag = document.getElementById('mapNameTag');
@@ -4552,6 +4727,15 @@ function showRankedResultsScreen(){
   const total = rm.eliminationPoints + rm.placementPoints - rm.entryCost;
   document.getElementById('rkTotalPts').textContent = (total>=0?'+':'')+total;
   document.getElementById('rkEntryLine').classList.toggle('hidden', rm.entryCost<=0);
+  // Ranked OFF: same results screen, but the points breakdown/rank-progress bar would all
+  // read as flat zeros — hide them and show one clear note instead of a confusing "+0"s.
+  document.getElementById('rkUnscoredNote').classList.toggle('hidden', rm.scored);
+  document.getElementById('rkPointsBreakdown').classList.toggle('hidden', !rm.scored);
+  document.getElementById('rkRankBadgeRow').classList.toggle('hidden', !rm.scored);
+  if(!rm.scored){
+    document.getElementById('rankedResultsScreen').classList.remove('hidden');
+    return;
+  }
 
   const badge = document.getElementById('rkBadge');
   const fill = document.getElementById('rkProgressFill');
