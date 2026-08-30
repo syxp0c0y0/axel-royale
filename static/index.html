@@ -1208,12 +1208,34 @@ function rankTierFor(points){
   return RANK_TIERS[RANK_TIERS.length-1];
 }
 function rankTierIndex(tierId){ return RANK_TIERS.findIndex(t=>t.id===tierId); }
+// Sub-divisions (III → II → I, climbing) within a single main rank tier — a purely-derived
+// display layer over the existing 8-tier point system. No new tier ids, and nothing that
+// keys off tier.id (RANKED_BOT_DIFF, RANKED_ENTRY_COST, RANK_REWARD_RARITY, RANK_IDENTITY,
+// RANK_BADGE_SHAPES, grantRankRewards) changes at all — this only affects what's *shown*.
+// Only Bronze/Silver/Gold/Platinum/Diamond get one, per the request; everything else
+// (Elite/Champion/Unreal) returns null and displays exactly as it always has.
+const RANK_SUBDIVIDED_TIERS = new Set(['bronze','silver','gold','platinum','diamond']);
+function rankDivisionInfo(tier, points){
+  if(!tier || !RANK_SUBDIVIDED_TIERS.has(tier.id)) return null;
+  const span = tier.max-tier.min+1;
+  const third = span/3;
+  const into = Math.min(span-1, Math.max(0, points-tier.min));
+  const bucket = Math.min(2, Math.floor(into/third)); // 0 = lowest third .. 2 = top third
+  const division = 3-bucket; // 0->III, 1->II, 2->I
+  return {division, roman:['','I','II','III'][division]};
+}
+function rankDisplayName(tier, points){
+  const div = rankDivisionInfo(tier, points);
+  return div? tier.name+' '+div.roman : tier.name;
+}
 function rankProgress(points){
   const t = rankTierFor(points);
-  if(t.max===Infinity) return {tier:t, pct:100, toNext:0};
+  const division = rankDivisionInfo(t, points);
+  const displayName = division? t.name+' '+division.roman : t.name;
+  if(t.max===Infinity) return {tier:t, pct:100, toNext:0, division, displayName};
   const span = t.max-t.min+1;
   const into = Math.max(0, points-t.min);
-  return {tier:t, pct:Math.min(100, into/span*100), toNext:Math.max(0, t.max+1-points)};
+  return {tier:t, pct:Math.min(100, into/span*100), toNext:Math.max(0, t.max+1-points), division, displayName};
 }
 // Grants every rank-exclusive reward (skin color + halo) up to and including the tier
 // the player currently sits at, for any tier not already owned — called after every
@@ -1649,7 +1671,7 @@ function cellKey(cx,cy){ return cx+','+cy; }
 
 function makeFighter(isBot){
   return {
-    isBot, team:0, color:null, colorId:null, hat:null, halo:null, rankTierId:null, spawnPos:null,
+    isBot, team:0, color:null, colorId:null, hat:null, halo:null, rankTierId:null, rankPoints:null, spawnPos:null,
     x:0, y:0, angle:0, hp:100, maxHp:100, alive:true,
     shield:0, maxShield:50,
     inventory:{shield:0, medkit:0}, consumableIdx:-1, usingItem:null, channelProgress:null,
@@ -2521,8 +2543,8 @@ function renderLobbyView(){
   drawPreviewCanvas(document.getElementById('lobbyPreview'));
 
   const prog = rankProgress(profile.ranked.points);
-  document.getElementById('lobbyRankBadge').innerHTML = rankBadgeSvg(prog.tier);
-  document.getElementById('lobbyRankName').textContent = prog.tier.name;
+  document.getElementById('lobbyRankBadge').innerHTML = rankBadgeSvg(prog.tier, prog.division);
+  document.getElementById('lobbyRankName').textContent = prog.displayName;
   document.getElementById('lobbyRankName').style.color = rankVisualColor(prog.tier);
   // The stage's background gradient tints toward the player's own rank color — a small
   // touch that ties "who you are" (rank) into the hub's visual identity.
@@ -2636,8 +2658,8 @@ function renderProfileView(){
   drawPreviewCanvas(document.getElementById('profilePreview'));
 
   const prog = rankProgress(profile.ranked.points);
-  document.getElementById('profileRankBadge').innerHTML = rankBadgeSvg(prog.tier);
-  document.getElementById('profileRankTierName').textContent = prog.tier.name;
+  document.getElementById('profileRankBadge').innerHTML = rankBadgeSvg(prog.tier, prog.division);
+  document.getElementById('profileRankTierName').textContent = prog.displayName;
   document.getElementById('profileRankTierName').style.color = rankVisualColor(prog.tier);
   document.getElementById('profileRankFill').style.background = rankVisualColor(prog.tier);
   document.getElementById('profileRankFill').style.width = prog.pct+'%';
@@ -2730,8 +2752,8 @@ document.getElementById('bpPremiumBtn').addEventListener('click', buyBattlePassP
 
 function renderRankedView(){
   const prog = rankProgress(profile.ranked.points);
-  document.getElementById('rankedMenuBadge').innerHTML = rankBadgeSvg(prog.tier);
-  document.getElementById('rankedMenuTierName').textContent = prog.tier.name;
+  document.getElementById('rankedMenuBadge').innerHTML = rankBadgeSvg(prog.tier, prog.division);
+  document.getElementById('rankedMenuTierName').textContent = prog.displayName;
   document.getElementById('rankedMenuTierName').style.color = rankVisualColor(prog.tier);
   document.getElementById('rankedMenuFill').style.background = rankVisualColor(prog.tier);
   document.getElementById('rankedMenuFill').style.width = prog.pct+'%';
@@ -2742,7 +2764,7 @@ function renderRankedView(){
   const tbody = document.getElementById('rankedLeaderboardBody');
   tbody.innerHTML = `<tr>
     <td>1</td><td>${displayName(profile.name)}</td><td>${Math.round(profile.ranked.points)}</td>
-    <td style="color:${rankVisualColor(prog.tier)}">${prog.tier.name}</td><td>${profile.ranked.wins}</td><td>${profile.ranked.kills}</td>
+    <td style="color:${rankVisualColor(prog.tier)}">${prog.displayName}</td><td>${profile.ranked.wins}</td><td>${profile.ranked.kills}</td>
   </tr>`;
 }
 document.querySelectorAll('[data-ranked]').forEach(btn=>{
@@ -3037,6 +3059,7 @@ function handleGameMessage(data){
       from.channelType = data.channelType||null;
       if(data.name) from.name = data.name;
       if(data.tier) from.rankTierId = data.tier;
+      if(data.rankPoints!=null) from.rankPoints = data.rankPoints;
       from.netTarget = {x:data.x, y:data.y, angle:data.angle};
       break;
     }
@@ -3091,7 +3114,7 @@ function handleGameMessage(data){
       // equipped skin/hat/halo and rank, not a placeholder.
       lobbyRoster[data.from] = {
         name: data.name, equippedColor: data.equippedColor, equippedHat: data.equippedHat,
-        equippedHalo: data.equippedHalo, rankTierId: data.rankTierId,
+        equippedHalo: data.equippedHalo, rankTierId: data.rankTierId, rankPoints: data.rankPoints,
       };
       renderLobbySlots();
       break;
@@ -3149,7 +3172,7 @@ function myLobbyInfo(){
   return {
     name: displayName(profile.name), equippedColor: profile.equippedColor,
     equippedHat: profile.equippedHat, equippedHalo: profile.equippedHalo,
-    rankTierId: rankTierFor(profile.ranked.points).id,
+    rankTierId: rankTierFor(profile.ranked.points).id, rankPoints: profile.ranked.points,
   };
 }
 function sendLobbyInfo(){ sendGame(Object.assign({k:'lobbyInfo'}, myLobbyInfo())); }
@@ -3168,7 +3191,8 @@ function renderLobbySlots(){
       const nameLine = document.createElement('div');
       nameLine.className = 'lobby-slot-name';
       const tier = RANK_TIERS.find(t=>t.id===info.rankTierId);
-      nameLine.innerHTML = (tier? `<span class="lobby-rank-badge">${rankBadgeSvg(tier)}</span>` : '') +
+      const division = tier && info.rankPoints!=null? rankDivisionInfo(tier, info.rankPoints) : null;
+      nameLine.innerHTML = (tier? `<span class="lobby-rank-badge">${rankBadgeSvg(tier, division)}</span>` : '') +
         `<span>${info.name}${i===myPeerIndex?' (tú)':''}</span>`;
       slot.appendChild(nameLine);
     } else {
@@ -4035,7 +4059,7 @@ function sendMyStateIfDue(){
              deaths:player.deaths, kills:player.kills, weaponIdx:player.weaponIdx, buildIdx:player.buildIdx, reloading:player.reloading,
              shield:player.shield, channelProgress:player.channelProgress,
              channelType: player.usingItem? player.usingItem.type : null, name:player.name,
-             tier: rankTierFor(profile.ranked.points).id});
+             tier: rankTierFor(profile.ranked.points).id, rankPoints: profile.ranked.points});
 }
 
 // Host-only: broadcast every bot's state exactly like a human peer would broadcast its
@@ -4830,12 +4854,14 @@ function drawFighter(f){
   // (recomputed from points every frame, so a rank-up/down mid-match updates instantly).
   // Only shown for the local player and for real remote humans in online whose rank we
   // actually know (synced via the periodic 's' broadcast) — bots have no rank to show.
+  const tagPoints = isP? profile.ranked.points : (f.isOnlineRemote? f.rankPoints : null);
   const tagTierId = isP? rankTierFor(profile.ranked.points).id : (f.isOnlineRemote? f.rankTierId : null);
   if(tagTierId){
     const rt = RANK_TIERS.find(t=>t.id===tagTierId);
     if(rt){
+      const tagName = tagPoints!=null? rankDisplayName(rt, tagPoints) : rt.name;
       ctx.fillStyle = rt.color; ctx.font = "700 9px Rajdhani, sans-serif";
-      ctx.fillText(rt.name.toUpperCase(), 0, -18);
+      ctx.fillText(tagName.toUpperCase(), 0, -18);
     }
   }
   ctx.fillStyle='#cfd6e4'; ctx.font="600 11px Rajdhani, sans-serif";
@@ -5105,7 +5131,7 @@ const RANK_BADGE_SHAPES = {
     <path d="M16 6.5 L18 14 L25.5 16 L18 18 L16 25.5 L14 18 L6.5 16 L14 14 Z" fill="#ffffff" opacity="0.75"/>
     <circle cx="16" cy="16" r="2.4" fill="#ffffff"/>`,
 };
-function rankBadgeSvg(tier){
+function rankBadgeSvg(tier, division){
   const c = rankVisualColor(tier);
   const identity = RANK_IDENTITY[tier.id];
   const hi = (identity && identity.gradient) ? identity.gradient[0][1] : '#ffffff';
@@ -5115,7 +5141,18 @@ function rankBadgeSvg(tier){
   // a Bronze badge stays flat while Unreal visibly radiates.
   const glow = identity ? Math.min(5, identity.glowBlur/4) : 0;
   const style = glow>1.5 ? ` style="filter:drop-shadow(0 0 ${glow.toFixed(1)}px ${c})"` : '';
-  return `<svg viewBox="0 0 32 32" width="100%" height="100%"${style}>${shape}</svg>`;
+  // Sub-division pips (Bronze/Silver/Gold/Platinum/Diamond only) — 3 small dots just below
+  // the badge, filling left-to-right as the player climbs III → II → I, so "how close to
+  // promotion" reads at a glance even without the text label next to the rank name.
+  let pips = '';
+  if(division && division.division>0){
+    const filled = 4-division.division;
+    for(let i=0;i<3;i++){
+      const on = i<filled;
+      pips += `<circle cx="${11+i*5}" cy="29.5" r="1.3" fill="${on? c : 'none'}" stroke="${c}" stroke-width="0.8" opacity="${on?1:0.5}"/>`;
+    }
+  }
+  return `<svg viewBox="0 0 32 32" width="100%" height="100%"${style}>${shape}${pips}</svg>`;
 }
 
 function showRankedResultsScreen(){
@@ -5147,8 +5184,9 @@ function showRankedResultsScreen(){
   rankUpBanner.classList.add('hidden'); rankUpBanner.classList.remove('show');
 
   const beforeProg = rankProgress(rm.beforePoints);
-  badge.innerHTML = rankBadgeSvg(rm.beforeTier);
-  tierName.textContent = rm.beforeTier.name;
+  const afterProg = rankProgress(rm.afterPoints);
+  badge.innerHTML = rankBadgeSvg(rm.beforeTier, beforeProg.division);
+  tierName.textContent = beforeProg.displayName;
   tierName.style.color = rankVisualColor(rm.beforeTier);
   fill.style.background = rankVisualColor(rm.beforeTier);
   fill.style.width = '0%';
@@ -5160,22 +5198,20 @@ function showRankedResultsScreen(){
     fill.style.width = beforeProg.pct+'%';
     if(rm.rankedUp){
       setTimeout(()=>{
-        badge.innerHTML = rankBadgeSvg(rm.afterTier);
-        tierName.textContent = rm.afterTier.name;
+        badge.innerHTML = rankBadgeSvg(rm.afterTier, afterProg.division);
+        tierName.textContent = afterProg.displayName;
         tierName.style.color = rankVisualColor(rm.afterTier);
         fill.style.background = rankVisualColor(rm.afterTier);
         fill.style.width = '0%';
         label.textContent = Math.round(rm.afterPoints)+' pts';
         rankUpBanner.classList.remove('hidden');
-        document.getElementById('rankUpSub').textContent = rm.beforeTier.name.toUpperCase()+' → '+rm.afterTier.name.toUpperCase();
+        document.getElementById('rankUpSub').textContent = beforeProg.displayName.toUpperCase()+' → '+afterProg.displayName.toUpperCase();
         requestAnimationFrame(()=>{
           rankUpBanner.classList.add('show');
-          const afterProg = rankProgress(rm.afterPoints);
           fill.style.width = afterProg.pct+'%';
         });
       }, 1000);
     } else {
-      const afterProg = rankProgress(rm.afterPoints);
       setTimeout(()=>{
         fill.style.width = afterProg.pct+'%';
         label.textContent = Math.round(rm.afterPoints)+' pts';
