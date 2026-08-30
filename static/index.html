@@ -1280,6 +1280,12 @@ const COLORS = [
   {id:'color_white',  type:'color', name:'Blanco',   hex:'#f0f2f5', rarity:'epic',      price:500},
   {id:'color_gold',   type:'color', name:'Dorado',   hex:'#ffd166', rarity:'legendary', price:800},
   {id:'color_prism',  type:'color', name:'Prisma',   hex:'#ff8a5c', rarity:'mythic',    price:1200, special:'prism'},
+  // A second wave of shop colors — real distinct hues, not tints of what's already there.
+  {id:'color_carbon',  type:'color', name:'Gris Carbón',   hex:'#5a6472', rarity:'common',    price:120},
+  {id:'color_coral',   type:'color', name:'Coral',         hex:'#ff7f66', rarity:'uncommon',  price:180},
+  {id:'color_indigo',  type:'color', name:'Índigo',        hex:'#4b3f9e', rarity:'rare',      price:320},
+  {id:'color_forest',  type:'color', name:'Verde Bosque',  hex:'#1f4d2c', rarity:'epic',      price:520},
+  {id:'color_amber',   type:'color', name:'Ámbar',         hex:'#ffb020', rarity:'legendary', price:850},
 ];
 // New colors added for the Battle Pass reward track (see BATTLE_PASS_FREE/PREMIUM below) —
 // price:0 + passReward, same pattern as the rank-reward colors: never in the coin shop,
@@ -1289,6 +1295,11 @@ const PASS_COLORS = [
   {id:'color_lime',    type:'color', name:'Lima',        hex:'#a8ff4d', rarity:'uncommon', price:0, passReward:true},
   {id:'color_orange',  type:'color', name:'Naranja',     hex:'#ff8a3d', rarity:'rare',     price:0, passReward:true},
   {id:'color_icecyan', type:'color', name:'Cian Hielo',  hex:'#8ff0ff', rarity:'rare',     price:0, passReward:true},
+  {id:'color_sand',    type:'color', name:'Beige Arena', hex:'#d8c39a', rarity:'common',   price:0, passReward:true},
+  {id:'color_mint',    type:'color', name:'Menta',       hex:'#6be0c0', rarity:'uncommon', price:0, passReward:true},
+  {id:'color_magenta', type:'color', name:'Magenta',     hex:'#e0389e', rarity:'rare',     price:0, passReward:true},
+  {id:'color_midnight',type:'color', name:'Azul Medianoche', hex:'#26327a', rarity:'epic', price:0, passReward:true},
+  {id:'color_fuchsia', type:'color', name:'Fucsia',      hex:'#ff36a3', rarity:'legendary',price:0, passReward:true},
 ];
 const HATS = [
   {id:'hat_none',     type:'hat', name:'Ninguno',          shape:'none',     rarity:'common',    price:0, default:true},
@@ -1300,6 +1311,10 @@ const HATS = [
   {id:'hat_horns',    type:'hat', name:'Cuernos',          shape:'horns',    rarity:'epic',      price:550},
   {id:'hat_crown',    type:'hat', name:'Corona',           shape:'crown',    rarity:'legendary', price:800},
   {id:'hat_halo',     type:'hat', name:'Halo',             shape:'halo',     rarity:'mythic',    price:1000},
+  // A second wave of shop hats.
+  {id:'hat_beret',    type:'hat', name:'Boina',            shape:'beret',    rarity:'common',    price:130},
+  {id:'hat_partyhat', type:'hat', name:'Gorro de Fiesta',  shape:'partyhat', rarity:'common',    price:140},
+  {id:'hat_hardhat',  type:'hat', name:'Casco de Obra',    shape:'hardhat',  rarity:'uncommon',  price:260},
 ];
 // New hats added for the Battle Pass reward track — real distinct silhouettes (see
 // drawHat()/hatSwatchSvg() below), never sold in the shop, only unlocked by reaching
@@ -1316,6 +1331,11 @@ const PASS_HATS = [
   {id:'hat_wizard',     type:'hat', name:'Sombrero de Mago',shape:'wizard',     rarity:'epic',      price:0, passReward:true},
   {id:'hat_mohawk',     type:'hat', name:'Mohawk',          shape:'mohawk',     rarity:'epic',      price:0, passReward:true},
   {id:'hat_dragon',     type:'hat', name:'Cresta de Dragón',shape:'dragon',     rarity:'legendary', price:0, passReward:true},
+  {id:'hat_headband',   type:'hat', name:'Bandana Deportiva',shape:'headband', rarity:'uncommon',  price:0, passReward:true},
+  {id:'hat_astronaut',  type:'hat', name:'Casco Astronauta',shape:'astronaut', rarity:'rare',      price:0, passReward:true},
+  {id:'hat_samurai',    type:'hat', name:'Casco Samurái',  shape:'samurai',    rarity:'rare',      price:0, passReward:true},
+  {id:'hat_robot',      type:'hat', name:'Casco Robótico', shape:'robot',      rarity:'epic',      price:0, passReward:true},
+  {id:'hat_phoenix',    type:'hat', name:'Cresta Fénix',   shape:'phoenix',    rarity:'legendary', price:0, passReward:true},
 ];
 // Rank-exclusive rewards: unlocked automatically the first time a player reaches each
 // rank (see grantRankRewards()) — never purchasable with coins, and kept forever once
@@ -4472,6 +4492,53 @@ function drawHat(shape, color, cx, cy, r){
       ctx.closePath(); ctx.fill(); ctx.stroke();
     }
     ctx.fillStyle='#ff5c3d'; ctx.beginPath(); ctx.arc(r*0.64,-r*0.08,r*0.045,0,Math.PI*2); ctx.fill();
+  } else if(shape==='beret'){
+    ctx.beginPath(); ctx.ellipse(-r*0.05,-r*0.15,r*0.62,r*0.4,-0.15,0,Math.PI*2); ctx.fill(); ctx.stroke();
+    ctx.fillStyle='#2a2f3a'; ctx.beginPath(); ctx.arc(r*0.15,-r*0.5,r*0.06,0,Math.PI*2); ctx.fill();
+  } else if(shape==='partyhat'){
+    ctx.beginPath();
+    ctx.moveTo(-r*0.32,0); ctx.lineTo(r*0.06,-r*0.85); ctx.lineTo(r*0.36,0);
+    ctx.closePath(); ctx.fill(); ctx.stroke();
+    ctx.fillStyle='#fff'; ctx.beginPath(); ctx.arc(r*0.06,-r*0.85,r*0.09,0,Math.PI*2); ctx.fill();
+  } else if(shape==='hardhat'){
+    ctx.beginPath(); ctx.ellipse(0,r*0.1,r*0.78,r*0.2,0,0,Math.PI*2); ctx.fill(); ctx.stroke();
+    ctx.beginPath(); ctx.arc(0,r*0.02,r*0.62,Math.PI,0); ctx.fill(); ctx.stroke();
+    ctx.strokeStyle='rgba(0,0,0,0.35)'; ctx.beginPath(); ctx.moveTo(0,-r*0.6); ctx.lineTo(0,r*0.02); ctx.stroke();
+  } else if(shape==='headband'){
+    ctx.lineWidth=r*0.22; ctx.strokeStyle=color;
+    ctx.beginPath(); ctx.arc(0,r*0.02,r*0.6,Math.PI*1.1,Math.PI*1.9); ctx.stroke();
+  } else if(shape==='astronaut'){
+    ctx.beginPath(); ctx.arc(0,-r*0.05,r*0.72,0,Math.PI*2); ctx.fillStyle='rgba(200,220,255,0.28)'; ctx.fill();
+    ctx.strokeStyle=color; ctx.lineWidth=r*0.1; ctx.stroke();
+    ctx.beginPath(); ctx.arc(-r*0.2,-r*0.3,r*0.16,Math.PI*1.1,Math.PI*1.7);
+    ctx.strokeStyle='rgba(255,255,255,0.6)'; ctx.lineWidth=r*0.05; ctx.stroke();
+    ctx.beginPath(); ctx.moveTo(r*0.3,-r*0.6); ctx.lineTo(r*0.42,-r*0.9);
+    ctx.strokeStyle=color; ctx.lineWidth=r*0.06; ctx.stroke();
+    ctx.fillStyle=color; ctx.beginPath(); ctx.arc(r*0.42,-r*0.92,r*0.05,0,Math.PI*2); ctx.fill();
+  } else if(shape==='samurai'){
+    ctx.beginPath(); ctx.arc(0,r*0.05,r*0.6,Math.PI,0); ctx.fill(); ctx.stroke();
+    ctx.beginPath();
+    ctx.moveTo(-r*0.4,-r*0.15);
+    ctx.quadraticCurveTo(0,-r*0.95,r*0.4,-r*0.15);
+    ctx.quadraticCurveTo(0,-r*0.55,-r*0.4,-r*0.15);
+    ctx.closePath(); ctx.fill(); ctx.stroke();
+  } else if(shape==='robot'){
+    ctx.beginPath(); ctx.arc(0,r*0.05,r*0.65,Math.PI,0); ctx.fill(); ctx.stroke();
+    ctx.fillStyle='#5ce0ff'; ctx.beginPath(); roundRect(-r*0.4,-r*0.12,r*0.8,r*0.14,r*0.05); ctx.fill();
+    ctx.strokeStyle=color; ctx.lineWidth=r*0.05;
+    ctx.beginPath(); ctx.moveTo(0,-r*0.65); ctx.lineTo(0,-r*0.9); ctx.stroke();
+    ctx.fillStyle='#ff5c5c'; ctx.beginPath(); ctx.arc(0,-r*0.92,r*0.06,0,Math.PI*2); ctx.fill();
+  } else if(shape==='phoenix'){
+    [-1,1].forEach(sgn=>{
+      ctx.beginPath();
+      ctx.moveTo(sgn*r*0.15,-r*0.1);
+      ctx.quadraticCurveTo(sgn*r*0.55,-r*0.35,sgn*r*0.75,-r*0.15);
+      ctx.quadraticCurveTo(sgn*r*0.55,-r*0.05,sgn*r*0.4,r*0.05);
+      ctx.quadraticCurveTo(sgn*r*0.3,-r*0.05,sgn*r*0.15,-r*0.1);
+      ctx.closePath(); ctx.fill(); ctx.stroke();
+    });
+    ctx.fillStyle='#ff6a2e';
+    ctx.beginPath(); ctx.moveTo(0,-r*0.15); ctx.lineTo(r*0.08,-r*0.55); ctx.lineTo(-r*0.08,-r*0.35); ctx.closePath(); ctx.fill();
   }
   ctx.restore();
 }
@@ -4498,6 +4565,14 @@ function hatSwatchSvg(shape,color){
     wizard: `<ellipse cx="16" cy="19" rx="13" ry="3" fill="${c}"/><path d="M9 19L16 3l7 16z" fill="${c}"/><circle cx="17" cy="8" r="1" fill="#ffd166"/><circle cx="14" cy="13" r="1" fill="#ffd166"/>`,
     mohawk: `<path d="M13 19l-2-9 4 3 1-11 1 11 4-3-2 9z" fill="${c}"/>`,
     dragon: `<path d="M4 17a12 9 0 0 1 22 0z" fill="${c}"/><path d="M24 10c4-1 7 1 8 4-3 2-6 1-8-1z" fill="${c}"/><path d="M9 9l-3-4 4 1z M13 6l-2-5 4 2z M17 5l0-5 3 3z" fill="${c}"/><circle cx="27" cy="12" r="1" fill="#ff5c3d"/>`,
+    beret: `<ellipse cx="15" cy="12" rx="11" ry="6.5" transform="rotate(-8 15 12)" fill="${c}"/><circle cx="20" cy="4" r="1.4" fill="#2a2f3a"/>`,
+    partyhat: `<path d="M6 19L16 3l10 16z" fill="${c}"/><circle cx="16" cy="3" r="2" fill="#fff"/>`,
+    hardhat: `<ellipse cx="16" cy="19" rx="14" ry="3.4" fill="${c}"/><path d="M3 19a13 13 0 0 1 26 0z" fill="${c}"/><line x1="16" y1="6" x2="16" y2="19" stroke="rgba(0,0,0,.35)" stroke-width="1.5"/>`,
+    headband: `<path d="M4 15a12 8 0 0 1 24 0" fill="none" stroke="${c}" stroke-width="4.5"/>`,
+    astronaut: `<circle cx="16" cy="11" r="12" fill="rgba(200,220,255,0.25)" stroke="${c}" stroke-width="2"/><path d="M9 6a8 8 0 0 0-2 4" fill="none" stroke="#fff" stroke-width="1.4" opacity=".6"/><line x1="24" y1="4" x2="27" y2="-1" stroke="${c}" stroke-width="1.6"/><circle cx="27" cy="-1" r="1.4" fill="${c}"/>`,
+    samurai: `<path d="M4 18a12 10 0 0 1 24 0z" fill="${c}"/><path d="M8 8c3-9 13-9 16 0-4-3-12-3-16 0z" fill="${c}" stroke="rgba(0,0,0,.3)"/>`,
+    robot: `<path d="M3 18a13 11 0 0 1 26 0z" fill="${c}"/><rect x="8" y="11" width="16" height="3.5" rx="1.5" fill="#5ce0ff"/><line x1="16" y1="4" x2="16" y2="7" stroke="${c}" stroke-width="1.6"/><circle cx="16" cy="3" r="1.5" fill="#ff5c5c"/>`,
+    phoenix: `<path d="M14 16c-6-2-9-7-8-12 3 2 5 6 8 8z" fill="${c}"/><path d="M18 16c6-2 9-7 8-12-3 2-5 6-8 8z" fill="${c}"/><path d="M16 16l2-8-4-1z" fill="#ff6a2e"/>`,
   };
   return `<svg viewBox="0 0 32 24" width="40" height="30">${shapes[shape]||''}</svg>`;
 }
