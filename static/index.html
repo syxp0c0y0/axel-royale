@@ -87,6 +87,12 @@ html,body{
   color:var(--muted); background:rgba(19,24,36,.7); border:1px solid var(--line); border-radius:20px;
   padding:4px 14px; pointer-events:none;
 }
+#minimapWrap{
+  position:fixed; top:16px; right:200px; z-index:5; pointer-events:none;
+  background:rgba(10,13,20,.78); border:1px solid var(--line); border-radius:10px; padding:4px;
+  box-shadow:0 4px 14px rgba(0,0,0,.4);
+}
+#minimapCanvas{display:block; border-radius:7px;}
 .tag{
   font-family:'Rajdhani'; font-weight:700; font-size:13px; padding:3px 10px;
   border-radius:3px; border:1px solid var(--line); background:var(--surface);
@@ -490,6 +496,7 @@ h1.title{
   <div id="spectateHintRanked" class="hidden">Tab: cambiar de jugador</div>
 </div>
 <div id="mapNameTag" class="hidden"></div>
+<div id="minimapWrap"><canvas id="minimapCanvas"></canvas></div>
 
 <div id="actionBar"></div>
 
@@ -1788,8 +1795,8 @@ function renderRankedView(){
   const prog = rankProgress(profile.ranked.points);
   document.getElementById('rankedMenuBadge').innerHTML = rankBadgeSvg(prog.tier);
   document.getElementById('rankedMenuTierName').textContent = prog.tier.name;
-  document.getElementById('rankedMenuTierName').style.color = prog.tier.color;
-  document.getElementById('rankedMenuFill').style.background = prog.tier.color;
+  document.getElementById('rankedMenuTierName').style.color = rankVisualColor(prog.tier);
+  document.getElementById('rankedMenuFill').style.background = rankVisualColor(prog.tier);
   document.getElementById('rankedMenuFill').style.width = prog.pct+'%';
   document.getElementById('rankedMenuProgressLabel').textContent = prog.tier.max===Infinity
     ? Math.round(profile.ranked.points)+' pts (rango máximo)'
@@ -1798,7 +1805,7 @@ function renderRankedView(){
   const tbody = document.getElementById('rankedLeaderboardBody');
   tbody.innerHTML = `<tr>
     <td>1</td><td>${displayName(profile.name)}</td><td>${Math.round(profile.ranked.points)}</td>
-    <td style="color:${prog.tier.color}">${prog.tier.name}</td><td>${profile.ranked.wins}</td><td>${profile.ranked.kills}</td>
+    <td style="color:${rankVisualColor(prog.tier)}">${prog.tier.name}</td><td>${profile.ranked.wins}</td><td>${profile.ranked.kills}</td>
   </tr>`;
 }
 document.querySelectorAll('[data-ranked]').forEach(btn=>{
@@ -2622,6 +2629,55 @@ function drawZone(){
   ctx.restore();
 }
 
+// ============================== MINIMAP ==============================
+// A small always-on overview, competitive-BR style: your own position (an arrow showing
+// facing), living teammates, obstacles/structures, and the ranked zone when there is one.
+// Enemies/bots are never shown — permanent enemy radar would make the game trivially easy,
+// which is exactly what this is here to avoid.
+const MINIMAP_W = 150;
+const MINIMAP_H = Math.round(MINIMAP_W * WORLD_H/WORLD_W);
+const minimapCanvas = document.getElementById('minimapCanvas');
+minimapCanvas.width = MINIMAP_W; minimapCanvas.height = MINIMAP_H;
+const minimapCtx = minimapCanvas.getContext('2d');
+function drawMinimap(){
+  const mctx = minimapCtx;
+  const sx = MINIMAP_W/WORLD_W, sy = MINIMAP_H/WORLD_H;
+  mctx.clearRect(0,0,MINIMAP_W,MINIMAP_H);
+  // Terrain: the same pre-rendered background the main view uses, just scaled way down —
+  // free re-use of existing art instead of building a second simplified map representation.
+  if(terrainCanvas) mctx.drawImage(terrainCanvas, 0,0,WORLD_W,WORLD_H, 0,0,MINIMAP_W,MINIMAP_H);
+  else { mctx.fillStyle = '#182a1c'; mctx.fillRect(0,0,MINIMAP_W,MINIMAP_H); }
+  // Obstacles/structures: every solid cell (walls, crates, houses) as a small dark mark —
+  // simple and legible at this scale without needing to distinguish each piece's type.
+  mctx.fillStyle = 'rgba(20,26,38,0.85)';
+  solids.forEach(p=>{ mctx.fillRect(p.cx*CELL*sx, p.cy*CELL*sy, Math.max(1.5,CELL*sx), Math.max(1.5,CELL*sy)); });
+  // Ranked zone (storm) boundary, same data drawMinimap's big-map counterpart uses.
+  if(isAnyRankedMatch() && rankedZone){
+    mctx.strokeStyle = 'rgba(230,140,255,0.9)'; mctx.lineWidth = 1.4;
+    mctx.beginPath(); mctx.ellipse(rankedZone.cx*sx, rankedZone.cy*sy, rankedZone.radius*sx, rankedZone.radius*sy, 0, 0, Math.PI*2); mctx.stroke();
+  }
+  // Living teammates (never enemies) — small cyan dots.
+  activeFighters.forEach(f=>{
+    if(f===player || !f.alive || f.team!==player.team) return;
+    mctx.beginPath(); mctx.arc(f.x*sx, f.y*sy, 3, 0, Math.PI*2);
+    mctx.fillStyle = '#5ce0ff'; mctx.fill();
+    mctx.strokeStyle = 'rgba(0,0,0,0.5)'; mctx.lineWidth = 1; mctx.stroke();
+  });
+  // You: a small triangle pointing the way you're aiming, easier to read at a glance than
+  // a plain dot and consistent with "parecido a minimapas de juegos competitivos".
+  if(player.alive){
+    mctx.save();
+    mctx.translate(player.x*sx, player.y*sy);
+    mctx.rotate(player.angle);
+    mctx.beginPath();
+    mctx.moveTo(6,0); mctx.lineTo(-4,4); mctx.lineTo(-4,-4); mctx.closePath();
+    mctx.fillStyle = '#ffd166';
+    mctx.shadowColor = '#ffd166'; mctx.shadowBlur = 4;
+    mctx.fill();
+    mctx.restore();
+  }
+}
+
 // ============================== FIRE / BUILD ==============================
 function currentWeapon(f){ return WEAPONS[f.weaponIdx]; }
 
@@ -3089,6 +3145,7 @@ function draw(){
   drawPings();
 
   ctx.restore();
+  drawMinimap();
 }
 
 function clamp(v,a,b){ return Math.max(a,Math.min(b,v)); }
@@ -3872,8 +3929,15 @@ function showEndScreen(){
   endScreen.classList.remove('hidden');
 }
 
+// The badge/progress-bar color for a rank comes from RANK_IDENTITY (the same palette
+// driving the skin/halo) instead of RANK_TIERS.color directly — RANK_TIERS.color is kept
+// for the plain in-game name-tag text (readable as plain white/etc. text), but a badge's
+// opacity-based fill needs a color with actual visual weight: RANK_TIERS.color for Unreal
+// is pure white, which reads as an empty/pale placeholder shield instead of a legendary
+// badge, and Champion's would show pink there instead of the red used everywhere else.
+function rankVisualColor(tier){ return (RANK_IDENTITY[tier.id] && RANK_IDENTITY[tier.id].base) || tier.color; }
 function rankBadgeSvg(tier){
-  const c = tier.color;
+  const c = rankVisualColor(tier);
   return `<svg viewBox="0 0 32 32" width="100%" height="100%">
     <path d="M16 2l11 4.5v8c0 8-5 13.6-11 15.5C10 28.1 5 22.5 5 14.5v-8z" fill="none" stroke="${c}" stroke-width="2" stroke-linejoin="round"/>
     <path d="M16 2l11 4.5v8c0 8-5 13.6-11 15.5z" fill="${c}" opacity="0.28"/>
@@ -3902,8 +3966,8 @@ function showRankedResultsScreen(){
   const beforeProg = rankProgress(rm.beforePoints);
   badge.innerHTML = rankBadgeSvg(rm.beforeTier);
   tierName.textContent = rm.beforeTier.name;
-  tierName.style.color = rm.beforeTier.color;
-  fill.style.background = rm.beforeTier.color;
+  tierName.style.color = rankVisualColor(rm.beforeTier);
+  fill.style.background = rankVisualColor(rm.beforeTier);
   fill.style.width = '0%';
   label.textContent = Math.round(rm.beforePoints)+' pts';
 
@@ -3915,8 +3979,8 @@ function showRankedResultsScreen(){
       setTimeout(()=>{
         badge.innerHTML = rankBadgeSvg(rm.afterTier);
         tierName.textContent = rm.afterTier.name;
-        tierName.style.color = rm.afterTier.color;
-        fill.style.background = rm.afterTier.color;
+        tierName.style.color = rankVisualColor(rm.afterTier);
+        fill.style.background = rankVisualColor(rm.afterTier);
         fill.style.width = '0%';
         label.textContent = Math.round(rm.afterPoints)+' pts';
         rankUpBanner.classList.remove('hidden');
