@@ -302,10 +302,13 @@ h1.title{
   border-radius:7px; padding:0 4px; margin-left:3px; vertical-align:top;
 }
 .mode-select-link{
-  display:block; width:100%; text-align:left; background:none; border:none; cursor:pointer;
-  font-family:'Rajdhani'; font-weight:600; font-size:11.5px; color:var(--muted); padding:6px 2px 2px;
+  display:flex; align-items:center; justify-content:space-between; width:100%; text-align:left;
+  background:var(--surface); border:1px solid var(--build); border-radius:8px; cursor:pointer;
+  font-family:'Rajdhani'; font-weight:700; font-size:12.5px; color:var(--build);
+  padding:9px 12px; margin:8px 0 0;
 }
-.mode-select-link:hover{color:var(--build);}
+.mode-select-link:hover{background:rgba(79,209,197,0.12);}
+.mode-select-link::after{content:'→'; font-weight:700;}
 
 /* ---------- Lobby hub ---------- */
 #lobbyStage{
@@ -1026,7 +1029,7 @@ h1.title{
         <span class="rt-state-label">ACTIVADO</span>
       </button>
     </div>
-    <button type="button" class="mode-select-link" id="modeSelectFriendsLink">¿Jugar con amigos reales o ver el leaderboard? →</button>
+    <button type="button" class="mode-select-link" id="modeSelectFriendsLink"><span>👥 Jugar con amigos reales / leaderboard</span></button>
 
     <div class="mode-select-section-label">COMBATE / ARENA</div>
     <div class="mode-select-grid mode-select-grid-2">
@@ -1044,7 +1047,7 @@ h1.title{
         <div class="msc-desc">Tú + 1 aliado bot vs 2 bots rivales</div>
       </div>
     </div>
-    <button type="button" class="mode-select-link" id="modeSelectOnlineLink">¿Multijugador online real (crear/unirse a sala)? →</button>
+    <button type="button" class="mode-select-link" id="modeSelectOnlineLink"><span>🌐 Multijugador online (crear/unirse a sala)</span></button>
 
     <div class="mode-select-section-label">PRÁCTICA</div>
     <div class="mode-select-grid mode-select-grid-1">
