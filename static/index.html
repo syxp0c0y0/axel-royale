@@ -232,7 +232,7 @@ h1.title{
   width:auto; padding:8px 16px; margin-bottom:16px; font-size:13px;
   position:sticky; top:0; z-index:2; background:var(--surface);
 }
-#mainMenuView, #customizeView, #shopView, #profileView, #onlineLobbyView, #topNavView, #rankedView, #challengesView{
+#mainMenuView, #customizeView, #shopView, #profileView, #onlineLobbyView, #topNavView, #rankedView, #challengesView, #battlePassView{
   max-height:78vh; overflow-y:auto; padding:1px 2px 4px;
 }
 
@@ -398,6 +398,61 @@ h1.title{
   border-radius:6px; padding:3px 8px;
 }
 #lobbyModeRankedTag.off{color:var(--muted); background:var(--surface2); border-color:var(--line);}
+
+/* ---------- Battle Pass ---------- */
+.battlepass-btn{border-color:var(--gold);}
+.battlepass-btn:hover{border-color:var(--gold);}
+#bpHeader{
+  display:flex; align-items:center; gap:16px; background:var(--surface); border:1px solid var(--line);
+  border-radius:10px; padding:16px; margin-bottom:14px;
+}
+#bpLevelBadge{
+  flex:0 0 auto; width:64px; height:64px; border-radius:12px; background:linear-gradient(160deg,#3a2f0a,#161200);
+  border:2px solid var(--gold); display:flex; flex-direction:column; align-items:center; justify-content:center;
+}
+#bpLevelNum{font-family:'Rajdhani'; font-weight:700; font-size:26px; color:var(--gold); line-height:1;}
+.bp-level-label{font-family:'Rajdhani'; font-weight:700; font-size:9px; color:var(--gold); letter-spacing:.12em; margin-top:2px;}
+#bpXpWrap{flex:1; text-align:left;}
+#bpXpLabel{font-family:'Rajdhani'; font-size:12px; color:var(--muted); margin-top:5px; font-variant-numeric:tabular-nums;}
+#bpXpWrap .rk-fill{background:var(--gold);}
+#bpPremiumRow{
+  display:flex; align-items:center; justify-content:space-between; gap:12px; background:var(--surface);
+  border:1px solid var(--line); border-radius:10px; padding:12px 14px; margin-bottom:18px;
+}
+#bpPremiumInfo .rt-desc{max-width:none;}
+#bpPremiumActiveTag{
+  font-family:'Rajdhani'; font-weight:700; font-size:12px; letter-spacing:.05em; color:var(--gold);
+  background:rgba(255,207,92,0.12); border:1px solid rgba(255,207,92,0.4); border-radius:6px; padding:8px 12px;
+}
+#bpTrackHead{
+  display:grid; grid-template-columns:36px 1fr 1fr; gap:8px; font-family:'Rajdhani'; font-weight:700;
+  font-size:10px; letter-spacing:.12em; color:var(--muted); text-transform:uppercase; padding:0 2px 6px;
+}
+#bpTrackList{display:flex; flex-direction:column; gap:6px;}
+.bp-level-row{display:grid; grid-template-columns:36px 1fr 1fr; gap:8px; align-items:stretch;}
+.bp-level-num{
+  display:flex; align-items:center; justify-content:center; font-family:'Rajdhani'; font-weight:700;
+  font-size:13px; color:var(--muted); background:var(--surface); border:1px solid var(--line); border-radius:8px;
+}
+.bp-reward-cell{
+  display:flex; align-items:center; gap:8px; background:var(--surface); border:1px solid var(--line);
+  border-radius:8px; padding:7px 10px; min-height:44px;
+}
+.bp-reward-cell.ready{border-color:var(--build);}
+.bp-reward-cell.claimed{opacity:.5;}
+.bp-reward-cell.premium-locked{opacity:.65;}
+.bp-reward-icon{flex:0 0 auto; font-size:18px; width:26px; text-align:center; display:flex; align-items:center; justify-content:center;}
+.bp-reward-icon .swatch{width:22px; height:22px; border-radius:6px;}
+.bp-reward-label{flex:1; font-family:'Rajdhani'; font-weight:600; font-size:12px; color:var(--ink); text-align:left;}
+.bp-claim-btn{
+  flex:0 0 auto; font-family:'Rajdhani'; font-weight:700; font-size:10.5px; letter-spacing:.03em;
+  border:1px solid var(--build); border-radius:6px; padding:6px 8px; background:rgba(79,209,197,0.14);
+  color:var(--build); cursor:pointer; white-space:nowrap;
+}
+.bp-claim-btn:hover{filter:brightness(1.15);}
+.bp-lock{flex:0 0 auto; font-family:'Rajdhani'; font-size:10px; color:var(--muted); white-space:nowrap;}
+.bp-claimed-tag{flex:0 0 auto; font-family:'Rajdhani'; font-weight:700; font-size:12px; color:var(--build);}
+
 .cosmetic-card{
   background:var(--surface); border:2px solid var(--line); border-radius:10px; padding:10px 8px;
   display:flex; flex-direction:column; align-items:center; gap:6px; cursor:pointer; position:relative;
@@ -711,10 +766,13 @@ h1.title{
       </div>
 
       <div class="cust-section-label">MÁS</div>
-      <div class="modes" style="grid-template-columns:repeat(3,1fr);">
+      <div class="modes" style="grid-template-columns:repeat(2,1fr);">
         <button class="mode-btn nav-btn challenges-btn" data-nav="challenges" id="challengesNavBtn">
           DESAFÍOS<span class="d">Misiones</span>
           <span id="challengesNavBadge" class="challenges-badge hidden">0</span>
+        </button>
+        <button class="mode-btn nav-btn battlepass-btn" data-nav="battlepass" id="battlePassNavBtn">
+          PASE DE BATALLA<span class="d" id="battlePassNavSub">Nivel 0</span>
         </button>
         <button class="mode-btn nav-btn" data-nav="ranked" id="rankedNavBtn">
           <span id="rankedNavRankName">RANKED</span><span class="d">Amigos y leaderboard</span>
@@ -848,6 +906,29 @@ h1.title{
       <div class="chal-list" id="dailyChalList"></div>
       <div class="cust-section-label">SEMANALES <span class="chal-reset-label" id="weeklyResetLabel"></span></div>
       <div class="chal-list" id="weeklyChalList"></div>
+    </div>
+
+    <div id="battlePassView" class="hidden">
+      <button class="mode-btn back-btn" data-nav="top">← VOLVER</button>
+      <div id="bpHeader">
+        <div id="bpLevelBadge"><span id="bpLevelNum">0</span><span class="bp-level-label">NIVEL</span></div>
+        <div id="bpXpWrap">
+          <div class="rk-track"><div class="rk-fill" id="bpXpFill"></div></div>
+          <div id="bpXpLabel">0 / 300 XP</div>
+        </div>
+      </div>
+      <div id="bpPremiumRow">
+        <div id="bpPremiumInfo">
+          <div class="rt-title">PASE PREMIUM</div>
+          <div class="rt-desc">Desbloquea la columna Premium de recompensas, para siempre.</div>
+        </div>
+        <button class="mode-btn ranked-btn" id="bpPremiumBtn" style="width:auto;">COMPRAR — <span id="bpPremiumPriceLabel">750</span> 🪙</button>
+        <div id="bpPremiumActiveTag" class="hidden">PREMIUM ACTIVO ✓</div>
+      </div>
+      <div id="bpTrackHead">
+        <div></div><div>GRATIS</div><div>PREMIUM</div>
+      </div>
+      <div id="bpTrackList"></div>
     </div>
 
     <div id="onlineLobbyView" class="hidden">
@@ -1159,6 +1240,15 @@ const COLORS = [
   {id:'color_gold',   type:'color', name:'Dorado',   hex:'#ffd166', rarity:'legendary', price:800},
   {id:'color_prism',  type:'color', name:'Prisma',   hex:'#ff8a5c', rarity:'mythic',    price:1200, special:'prism'},
 ];
+// New colors added for the Battle Pass reward track (see BATTLE_PASS_FREE/PREMIUM below) —
+// price:0 + passReward, same pattern as the rank-reward colors: never in the coin shop,
+// only ever unlocked by reaching (and claiming) their assigned pass level.
+const PASS_COLORS = [
+  {id:'color_teal',    type:'color', name:'Turquesa',    hex:'#2de2c0', rarity:'uncommon', price:0, passReward:true},
+  {id:'color_lime',    type:'color', name:'Lima',        hex:'#a8ff4d', rarity:'uncommon', price:0, passReward:true},
+  {id:'color_orange',  type:'color', name:'Naranja',     hex:'#ff8a3d', rarity:'rare',     price:0, passReward:true},
+  {id:'color_icecyan', type:'color', name:'Cian Hielo',  hex:'#8ff0ff', rarity:'rare',     price:0, passReward:true},
+];
 const HATS = [
   {id:'hat_none',     type:'hat', name:'Ninguno',          shape:'none',     rarity:'common',    price:0, default:true},
   {id:'hat_cap',      type:'hat', name:'Gorra',            shape:'cap',      rarity:'common',    price:100},
@@ -1169,6 +1259,22 @@ const HATS = [
   {id:'hat_horns',    type:'hat', name:'Cuernos',          shape:'horns',    rarity:'epic',      price:550},
   {id:'hat_crown',    type:'hat', name:'Corona',           shape:'crown',    rarity:'legendary', price:800},
   {id:'hat_halo',     type:'hat', name:'Halo',             shape:'halo',     rarity:'mythic',    price:1000},
+];
+// New hats added for the Battle Pass reward track — real distinct silhouettes (see
+// drawHat()/hatSwatchSvg() below), never sold in the shop, only unlocked by reaching
+// (and claiming) their assigned pass level. Rarity escalates the same way the existing
+// hats already do, just spread across a bigger roster than before.
+const PASS_HATS = [
+  {id:'hat_visor',      type:'hat', name:'Visera',          shape:'visor',      rarity:'common',    price:0, passReward:true},
+  {id:'hat_headphones', type:'hat', name:'Audífonos',       shape:'headphones', rarity:'common',    price:0, passReward:true},
+  {id:'hat_bucket',     type:'hat', name:'Bucket Hat',      shape:'bucket',     rarity:'uncommon',  price:0, passReward:true},
+  {id:'hat_bandana',    type:'hat', name:'Bandana',         shape:'bandana',    rarity:'uncommon',  price:0, passReward:true},
+  {id:'hat_pirate',     type:'hat', name:'Sombrero Pirata', shape:'pirate',     rarity:'rare',      price:0, passReward:true},
+  {id:'hat_ninja',      type:'hat', name:'Capucha Ninja',   shape:'ninja',      rarity:'rare',      price:0, passReward:true},
+  {id:'hat_viking',     type:'hat', name:'Casco Vikingo',   shape:'viking',     rarity:'rare',      price:0, passReward:true},
+  {id:'hat_wizard',     type:'hat', name:'Sombrero de Mago',shape:'wizard',     rarity:'epic',      price:0, passReward:true},
+  {id:'hat_mohawk',     type:'hat', name:'Mohawk',          shape:'mohawk',     rarity:'epic',      price:0, passReward:true},
+  {id:'hat_dragon',     type:'hat', name:'Cresta de Dragón',shape:'dragon',     rarity:'legendary', price:0, passReward:true},
 ];
 // Rank-exclusive rewards: unlocked automatically the first time a player reaches each
 // rank (see grantRankRewards()) — never purchasable with coins, and kept forever once
@@ -1186,7 +1292,7 @@ const HALOS = [
 ].concat(RANK_TIERS.map(t=>({
   id:'halo_'+t.id, type:'halo', name:'Halo '+t.name, shape:t.id, rarity:RANK_REWARD_RARITY[t.id], price:0, rankReward:t.id,
 })));
-const COSMETICS = COLORS.concat(HATS).concat(RANK_REWARD_COLORS).concat(HALOS);
+const COSMETICS = COLORS.concat(HATS).concat(PASS_COLORS).concat(PASS_HATS).concat(RANK_REWARD_COLORS).concat(HALOS);
 // Which profile field each cosmetic slot equips into — shared by Customize and the Shop.
 const EQUIP_FIELD = {color:'equippedColor', hat:'equippedHat', halo:'equippedHalo'};
 
@@ -1214,6 +1320,7 @@ function defaultProfile(){
     selectedRankedMode:'rankedSolo',
     rankedToggleOn:true,
     oneVOneDiff:'normal',
+    battlePass:{xp:0, premium:false, claimedFree:[], claimedPremium:[]},
   };
 }
 let profile = loadProfile();
@@ -1243,6 +1350,12 @@ function loadProfile(){
       selectedRankedMode: ['rankedSolo','rankedDuos','rankedTrios','practice','easy','normal','hard','2v2normal'].includes(p.selectedRankedMode)? p.selectedRankedMode : d.selectedRankedMode,
       rankedToggleOn: typeof p.rankedToggleOn==='boolean'? p.rankedToggleOn : d.rankedToggleOn,
       oneVOneDiff: ['easy','normal','hard'].includes(p.oneVOneDiff)? p.oneVOneDiff : d.oneVOneDiff,
+      battlePass: {
+        xp: (p.battlePass && typeof p.battlePass.xp==='number')? p.battlePass.xp : 0,
+        premium: !!(p.battlePass && p.battlePass.premium),
+        claimedFree: (p.battlePass && Array.isArray(p.battlePass.claimedFree))? p.battlePass.claimedFree : [],
+        claimedPremium: (p.battlePass && Array.isArray(p.battlePass.claimedPremium))? p.battlePass.claimedPremium : [],
+      },
     };
   } catch(e){ return defaultProfile(); }
 }
@@ -1363,11 +1476,13 @@ function claimChallenge(scope, idx){
   saveProfile();
   refreshTopNavSummary();
   showToast('DESAFÍO COMPLETADO  +'+item.coins+' 🪙');
+  grantBattlePassXP(scope==='daily'? 20 : 60); // ties challenges into pass progress too
   renderChallengesView();
 }
 // Accumulates the local player's own alive time during a real (non-practice) match into
 // whole-second ticks for the 'survive' mission type — called from the main loop.
 let _surviveAccumMs = 0;
+let _xpSurviveAccumSec = 0;
 function updateChallengeSurvival(dt){
   if(isSpectating || mode==='practice' || !running || !player.alive) { _surviveAccumMs = 0; return; }
   _surviveAccumMs += dt*1000;
@@ -1375,9 +1490,120 @@ function updateChallengeSurvival(dt){
     const wholeSecs = Math.floor(_surviveAccumMs/1000);
     _surviveAccumMs -= wholeSecs*1000;
     trackChallengeProgress('survive', wholeSecs);
+    // Battle Pass XP for time survived — a much slower trickle than kills/matches, on
+    // purpose (it's a "you were in the fight" trickle, not a real progression driver).
+    _xpSurviveAccumSec += wholeSecs;
+    if(_xpSurviveAccumSec>=20){
+      const xpTicks = Math.floor(_xpSurviveAccumSec/20);
+      _xpSurviveAccumSec -= xpTicks*20;
+      grantBattlePassXP(xpTicks);
+    }
   }
 }
 ensureChallenges();
+
+// ============================== BATTLE PASS / XP ==============================
+// A separate progression currency from coins (per the request: "no mezcles ambos
+// sistemas"). XP only ever moves the Battle Pass level forward; coins are untouched by
+// anything here except the one-time Premium purchase, which SPENDS coins same as any
+// shop item — the existing per-kill coin reward (KILL_COIN_REWARD) is never read or
+// modified by this module.
+const PREMIUM_PASS_PRICE = 750; // between a legendary (800) and epic (550) shop item —
+// a real, considered purchase, not a rushable one, not a wall either.
+const BATTLE_PASS_MAX_LEVEL = 30;
+const KILL_XP = 15;
+const MATCH_PLAYED_XP = 30;
+const MATCH_WIN_XP = 50;
+// XP needed to advance FROM (n-1) TO n — a gentle, steady ramp so early levels come
+// quickly (rewarding) while the back half of the pass takes real sustained play.
+function xpForLevel(n){ return 300 + (n-1)*40; }
+// {level: reward} — level 0 has no reward (that's "not started yet"). Every cosmetic id
+// here must exist in PASS_HATS/PASS_COLORS above; nothing appears twice across both lanes.
+const BATTLE_PASS_FREE = {
+  1:{type:'coins',amount:20}, 2:{type:'coins',amount:20}, 3:{type:'coins',amount:25}, 4:{type:'coins',amount:25},
+  5:{type:'cosmetic',id:'hat_visor'},
+  6:{type:'coins',amount:25}, 7:{type:'coins',amount:30}, 8:{type:'coins',amount:30}, 9:{type:'coins',amount:30},
+  10:{type:'cosmetic',id:'color_teal'},
+  11:{type:'coins',amount:35}, 12:{type:'coins',amount:35}, 13:{type:'coins',amount:35}, 14:{type:'coins',amount:40},
+  15:{type:'cosmetic',id:'hat_bucket'},
+  16:{type:'coins',amount:40}, 17:{type:'coins',amount:40}, 18:{type:'coins',amount:45}, 19:{type:'coins',amount:45},
+  20:{type:'cosmetic',id:'hat_bandana'},
+  21:{type:'coins',amount:45}, 22:{type:'coins',amount:50}, 23:{type:'coins',amount:50}, 24:{type:'coins',amount:50},
+  25:{type:'cosmetic',id:'color_orange'},
+  26:{type:'coins',amount:55}, 27:{type:'coins',amount:55}, 28:{type:'coins',amount:60}, 29:{type:'coins',amount:60},
+  30:{type:'cosmetic',id:'hat_pirate'},
+};
+const BATTLE_PASS_PREMIUM = {
+  1:{type:'cosmetic',id:'hat_headphones'}, 2:{type:'coins',amount:30},
+  3:{type:'cosmetic',id:'color_lime'},     4:{type:'coins',amount:35},
+  5:{type:'cosmetic',id:'hat_ninja'},      6:{type:'coins',amount:40},
+  7:{type:'cosmetic',id:'color_icecyan'},  8:{type:'coins',amount:40}, 9:{type:'coins',amount:45},
+  10:{type:'cosmetic',id:'hat_viking'},
+  11:{type:'coins',amount:45}, 12:{type:'coins',amount:50}, 13:{type:'coins',amount:50}, 14:{type:'coins',amount:55},
+  15:{type:'cosmetic',id:'hat_wizard'},
+  16:{type:'coins',amount:55}, 17:{type:'coins',amount:60}, 18:{type:'coins',amount:60}, 19:{type:'coins',amount:65},
+  20:{type:'cosmetic',id:'hat_mohawk'},
+  21:{type:'coins',amount:65}, 22:{type:'coins',amount:70}, 23:{type:'coins',amount:70}, 24:{type:'coins',amount:75},
+  25:{type:'coins',amount:75}, 26:{type:'coins',amount:80}, 27:{type:'coins',amount:80}, 28:{type:'coins',amount:85},
+  29:{type:'coins',amount:85},
+  30:{type:'cosmetic',id:'hat_dragon'},
+};
+// Reverse lookup (cosmetic id -> where it lives in the track) so a locked cosmetic card in
+// Locker/Item Shop can tell the player exactly how to get it, instead of a bare 🔒.
+const PASS_REWARD_LOCATION = {};
+[['free',BATTLE_PASS_FREE],['premium',BATTLE_PASS_PREMIUM]].forEach(([lane,track])=>{
+  Object.entries(track).forEach(([lvl,r])=>{ if(r.type==='cosmetic') PASS_REWARD_LOCATION[r.id] = {lane, level:Number(lvl)}; });
+});
+// Given total XP, the current level (capped at BATTLE_PASS_MAX_LEVEL) and progress within it.
+function battlePassLevelInfo(xp){
+  let level = 0, remaining = xp;
+  while(level<BATTLE_PASS_MAX_LEVEL && remaining>=xpForLevel(level+1)){ remaining -= xpForLevel(level+1); level++; }
+  const maxed = level>=BATTLE_PASS_MAX_LEVEL;
+  const need = maxed? 0 : xpForLevel(level+1);
+  return {level, xpIntoLevel: maxed? 0 : remaining, xpForNext: need, pct: maxed? 100 : Math.min(100, Math.round(remaining/need*100)), maxed};
+}
+// The single place XP is ever added. Detects and toasts a level-up — the one Battle Pass
+// moment worth interrupting the player for; every other XP tick is silent (checked on the
+// dedicated Battle Pass screen instead, same "no spam" spirit as the coin/kill toasts).
+function grantBattlePassXP(amount){
+  if(!amount) return;
+  const before = battlePassLevelInfo(profile.battlePass.xp).level;
+  profile.battlePass.xp += amount;
+  const after = battlePassLevelInfo(profile.battlePass.xp).level;
+  saveProfile();
+  if(after>before) showToast('¡PASE DE BATALLA — NIVEL '+after+'!  🎫');
+}
+function battlePassRewardLabel(r){
+  if(r.type==='coins') return '+'+r.amount+' 🪙';
+  const c = cosmeticById(r.id);
+  return c? c.name : '???';
+}
+function claimBattlePassReward(lane, level){
+  const track = lane==='premium'? BATTLE_PASS_PREMIUM : BATTLE_PASS_FREE;
+  const r = track[level];
+  if(!r) return;
+  const claimedList = lane==='premium'? profile.battlePass.claimedPremium : profile.battlePass.claimedFree;
+  if(claimedList.includes(level)) return;
+  if(battlePassLevelInfo(profile.battlePass.xp).level < level) return;
+  if(lane==='premium' && !profile.battlePass.premium) return;
+  claimedList.push(level);
+  if(r.type==='coins') profile.coins += r.amount;
+  else if(r.type==='cosmetic' && !profile.owned.includes(r.id)) profile.owned.push(r.id);
+  saveProfile();
+  refreshTopNavSummary();
+  showToast('RECOMPENSA RECLAMADA: '+battlePassRewardLabel(r));
+  renderBattlePassView();
+}
+function buyBattlePassPremium(){
+  if(profile.battlePass.premium) return;
+  if(profile.coins < PREMIUM_PASS_PRICE) { showToast('Monedas insuficientes para el Pase Premium'); return; }
+  profile.coins -= PREMIUM_PASS_PRICE;
+  profile.battlePass.premium = true;
+  saveProfile();
+  refreshTopNavSummary();
+  showToast('¡PASE DE BATALLA PREMIUM DESBLOQUEADO! 🎫');
+  renderBattlePassView();
+}
 
 // ============================== STATE ==============================
 const canvas = document.getElementById('game');
@@ -1954,6 +2180,7 @@ const SUBVIEWS = {
   profile: document.getElementById('profileView'),
   ranked: document.getElementById('rankedView'),
   challenges: document.getElementById('challengesView'),
+  battlepass: document.getElementById('battlePassView'),
 };
 
 function refreshTopNavSummary(){
@@ -1966,6 +2193,8 @@ function refreshTopNavSummary(){
   const claimable = claimableChallengeCount();
   document.getElementById('challengesNavBadge').textContent = claimable;
   document.getElementById('challengesNavBadge').classList.toggle('hidden', claimable<=0);
+  const bpInfo = battlePassLevelInfo(profile.battlePass.xp);
+  document.getElementById('battlePassNavSub').textContent = 'Nivel '+bpInfo.level+(profile.battlePass.premium? ' · Premium':'');
 }
 // The 4 top-bar buttons (Lobby/Locker/Item Shop/Profile) are duplicated in every one of
 // those 4 view containers so the bar stays visible while any of them is open; keeping the
@@ -1992,6 +2221,7 @@ function showSubview(name){
   if(name==='profile') renderProfileView();
   if(name==='ranked') renderRankedView();
   if(name==='challenges') renderChallengesView();
+  if(name==='battlepass') renderBattlePassView();
   if(['customize','shop','profile'].includes(name)) updateTopbarActive(name);
   if(name==='customize' || name==='profile') ensurePreviewAnimating();
 }
@@ -2110,9 +2340,16 @@ nameInput.addEventListener('input', ()=>{
 // Locked reward-only cosmetics show which rank unlocks them instead of a shop price —
 // there's nothing to buy, so "reach Diamond" is the only useful thing to tell the player.
 function lockHintHTML(c){
-  if(!c.rankReward) return '';
-  const t = RANK_TIERS.find(t=>t.id===c.rankReward);
-  return `<div class="cname" style="font-size:10px; opacity:.7;">Rango: ${t.name}</div>`;
+  if(c.rankReward){
+    const t = RANK_TIERS.find(t=>t.id===c.rankReward);
+    return `<div class="cname" style="font-size:10px; opacity:.7;">Rango: ${t.name}</div>`;
+  }
+  if(c.passReward){
+    const loc = PASS_REWARD_LOCATION[c.id];
+    if(!loc) return '';
+    return `<div class="cname" style="font-size:10px; opacity:.7;">Pase Nv.${loc.level} (${loc.lane==='premium'?'Premium':'Gratis'})</div>`;
+  }
+  return '';
 }
 function renderCosmeticGrid(gridEl, list){
   gridEl.innerHTML = '';
@@ -2204,7 +2441,7 @@ function renderShopView(){
   grid.innerHTML = '';
   // Rank-exclusive rewards are never for sale — they're earned by reaching that rank
   // (see grantRankRewards()) and only show up in Customize once unlocked.
-  COSMETICS.filter(c=>!c.rankReward).forEach(c=>{
+  COSMETICS.filter(c=>!c.rankReward && !c.passReward).forEach(c=>{
     const field = EQUIP_FIELD[c.type];
     const owned = ownsCosmetic(c.id);
     const equipped = profile[field]===c.id;
@@ -2411,6 +2648,54 @@ function renderChallengesView(){
   });
   refreshTopNavSummary();
 }
+
+function bpRewardCellHtml(lane, level){
+  const track = lane==='premium'? BATTLE_PASS_PREMIUM : BATTLE_PASS_FREE;
+  const r = track[level];
+  if(!r) return '<div class="bp-reward-cell bp-empty"></div>';
+  const info = battlePassLevelInfo(profile.battlePass.xp);
+  const unlocked = info.level >= level;
+  const premiumLocked = lane==='premium' && !profile.battlePass.premium;
+  const claimedList = lane==='premium'? profile.battlePass.claimedPremium : profile.battlePass.claimedFree;
+  const claimed = claimedList.includes(level);
+  const icon = r.type==='coins'? '🪙' : cosmeticSwatchHTML(cosmeticById(r.id));
+  let stateClass, control;
+  if(claimed){ stateClass='claimed'; control = '<span class="bp-claimed-tag">✓</span>'; }
+  else if(premiumLocked){ stateClass='premium-locked'; control = '<span class="bp-lock">🔒 Premium</span>'; }
+  else if(!unlocked){ stateClass='locked'; control = `<span class="bp-lock">Nv.${level}</span>`; }
+  else { stateClass='ready'; control = `<button class="bp-claim-btn" data-lane="${lane}" data-level="${level}">RECLAMAR</button>`; }
+  return `<div class="bp-reward-cell ${stateClass}">
+    <div class="bp-reward-icon">${icon}</div>
+    <div class="bp-reward-label">${battlePassRewardLabel(r)}</div>
+    ${control}
+  </div>`;
+}
+function renderBattlePassView(){
+  const info = battlePassLevelInfo(profile.battlePass.xp);
+  document.getElementById('bpLevelNum').textContent = info.level;
+  document.getElementById('bpXpLabel').textContent = info.maxed
+    ? Math.round(profile.battlePass.xp)+' XP (nivel máximo)'
+    : info.xpIntoLevel+' / '+info.xpForNext+' XP';
+  document.getElementById('bpXpFill').style.width = info.pct+'%';
+  document.getElementById('bpPremiumBtn').classList.toggle('hidden', profile.battlePass.premium);
+  document.getElementById('bpPremiumActiveTag').classList.toggle('hidden', !profile.battlePass.premium);
+  document.getElementById('bpPremiumPriceLabel').textContent = PREMIUM_PASS_PRICE;
+
+  const rows = [];
+  for(let lvl=1; lvl<=BATTLE_PASS_MAX_LEVEL; lvl++){
+    rows.push(`<div class="bp-level-row">
+      <div class="bp-level-num">${lvl}</div>
+      ${bpRewardCellHtml('free', lvl)}
+      ${bpRewardCellHtml('premium', lvl)}
+    </div>`);
+  }
+  document.getElementById('bpTrackList').innerHTML = rows.join('');
+  document.querySelectorAll('.bp-claim-btn').forEach(btn=>{
+    btn.addEventListener('click', ()=> claimBattlePassReward(btn.dataset.lane, Number(btn.dataset.level)));
+  });
+  refreshTopNavSummary();
+}
+document.getElementById('bpPremiumBtn').addEventListener('click', buyBattlePassPremium);
 
 function renderRankedView(){
   const prog = rankProgress(profile.ranked.points);
@@ -3049,6 +3334,7 @@ function awardElimination(){
   profile.coins += KILL_COIN_REWARD;
   profile.stats.kills++;
   trackChallengeProgress('kills', 1);
+  grantBattlePassXP(KILL_XP); // separate currency from coins — always granted, same as coins
   if(isAnyRankedMatch() && rankedMatch && !rankedMatch.ended && rankedMatch.scored){
     profile.ranked.points += KILL_RANKED_POINTS;
     rankedMatch.eliminationPoints += KILL_RANKED_POINTS;
@@ -3086,6 +3372,7 @@ function checkWinner(attacker){
     saveProfile();
     trackChallengeProgress('matches', 1);
     if(winner==='player') trackChallengeProgress('win', 1);
+    grantBattlePassXP(MATCH_PLAYED_XP + (winner==='player'? MATCH_WIN_XP : 0));
     setTimeout(showEndScreen, 900);
   }
 }
@@ -3130,8 +3417,12 @@ function updateRankedMilestones(remaining){
 // the authority, and replayed by every other human client off the host's 'rk' broadcast.
 function applyRankedMilestone(thresh, pts){
   if(!rankedMatch || rankedMatch.milestonesHit.has(thresh)) return;
-  if(!rankedMatch.scored) return; // Ranked OFF: play the same match, skip the points/toast
+  // Marked hit (and XP granted) unconditionally, BEFORE the scored check below — otherwise
+  // an unscored match would never record the milestone as hit and this would re-fire (and
+  // re-grant XP) on every subsequent elimination while remaining<=thresh stays true.
   rankedMatch.milestonesHit.add(thresh);
+  grantBattlePassXP(Math.round(pts/2)); // XP always granted, Ranked toggle or not
+  if(!rankedMatch.scored) return; // Ranked OFF: play the same match, skip the points/toast
   rankedMatch.placementPoints += pts;
   rankedMatch.pointsThisMatch += pts;
   profile.ranked.points += pts;
@@ -3184,6 +3475,7 @@ function applyRankedMatchEnd(placement){
   trackChallengeProgress('matches', 1);
   if(placement===1) trackChallengeProgress('win', 1);
   if(scored) trackChallengeProgress('topX', 1, {placement});
+  grantBattlePassXP(MATCH_PLAYED_XP + (placement===1? MATCH_WIN_XP : 0)); // XP always, Ranked toggle or not
   setTimeout(showRankedResultsScreen, 900);
 }
 
@@ -3986,6 +4278,75 @@ function drawHat(shape, color, cx, cy, r){
   } else if(shape==='halo'){
     ctx.strokeStyle=color; ctx.lineWidth=r*0.1;
     ctx.beginPath(); ctx.ellipse(0,-r*0.55,r*0.42,r*0.14,0,0,Math.PI*2); ctx.stroke();
+  } else if(shape==='visor'){
+    // Open-top racing visor — just a headband + forward brim, no dome (unlike cap/helmet).
+    ctx.lineWidth = r*0.14; ctx.strokeStyle = color;
+    ctx.beginPath(); ctx.arc(0,-r*0.05,r*0.6,Math.PI*1.08,Math.PI*1.92); ctx.stroke();
+    ctx.beginPath(); roundRect(-r*0.08,-r*0.42,r*0.58,r*0.13,r*0.06); ctx.fill(); ctx.stroke();
+  } else if(shape==='headphones'){
+    ctx.lineWidth = r*0.12; ctx.strokeStyle = color;
+    ctx.beginPath(); ctx.arc(0,r*0.05,r*0.66,Math.PI*1.08,Math.PI*1.92); ctx.stroke();
+    [-1,1].forEach(sgn=>{
+      ctx.beginPath(); ctx.ellipse(sgn*r*0.62,r*0.1,r*0.15,r*0.22,0,0,Math.PI*2);
+      ctx.fillStyle=color; ctx.fill(); ctx.strokeStyle='rgba(0,0,0,0.4)'; ctx.lineWidth=1; ctx.stroke();
+    });
+  } else if(shape==='bucket'){
+    ctx.beginPath(); ctx.ellipse(0,r*0.08,r*0.88,r*0.22,0,0,Math.PI*2); ctx.fill(); ctx.stroke();
+    ctx.beginPath(); roundRect(-r*0.5,-r*0.35,r*1.0,r*0.44,r*0.16); ctx.fill(); ctx.stroke();
+  } else if(shape==='bandana'){
+    ctx.beginPath(); ctx.arc(0,r*0.1,r*0.64,Math.PI,0); ctx.fill(); ctx.stroke();
+    ctx.beginPath(); ctx.moveTo(r*0.5,r*0.05); ctx.lineTo(r*0.78,r*0.16); ctx.lineTo(r*0.5,r*0.26);
+    ctx.closePath(); ctx.fill(); ctx.stroke(); // knotted tail sticking out the side
+  } else if(shape==='pirate'){
+    ctx.beginPath();
+    ctx.moveTo(-r*0.75,-r*0.05);
+    ctx.quadraticCurveTo(-r*0.9,-r*0.35, -r*0.25,-r*0.45);
+    ctx.quadraticCurveTo(0,-r*0.65, r*0.25,-r*0.45);
+    ctx.quadraticCurveTo(r*0.9,-r*0.35, r*0.75,-r*0.05);
+    ctx.quadraticCurveTo(0,r*0.15, -r*0.75,-r*0.05);
+    ctx.closePath(); ctx.fill(); ctx.stroke();
+    ctx.fillStyle='#fff'; ctx.beginPath(); ctx.arc(0,-r*0.48,r*0.06,0,Math.PI*2); ctx.fill();
+  } else if(shape==='ninja'){
+    ctx.beginPath(); ctx.arc(0,r*0.02,r*0.72,Math.PI*1.05,Math.PI*1.95); ctx.fill(); ctx.stroke();
+    ctx.beginPath(); roundRect(-r*0.5,-r*0.1,r*1.0,r*0.16,r*0.05);
+    ctx.fillStyle='rgba(0,0,0,0.5)'; ctx.fill();
+  } else if(shape==='viking'){
+    ctx.beginPath(); ctx.arc(0,r*0.08,r*0.6,Math.PI,0); ctx.fill(); ctx.stroke();
+    [-1,1].forEach(sgn=>{
+      ctx.beginPath();
+      ctx.moveTo(sgn*r*0.5,-r*0.1);
+      ctx.quadraticCurveTo(sgn*r*0.88,-r*0.42,sgn*r*0.66,-r*0.78);
+      ctx.quadraticCurveTo(sgn*r*0.72,-r*0.38,sgn*r*0.32,-r*0.18);
+      ctx.closePath(); ctx.fillStyle='#e8e2d0'; ctx.fill(); ctx.strokeStyle='rgba(0,0,0,0.35)'; ctx.stroke();
+    });
+  } else if(shape==='wizard'){
+    ctx.beginPath(); ctx.ellipse(0,r*0.02,r*0.72,r*0.16,0,0,Math.PI*2); ctx.fill(); ctx.stroke();
+    ctx.beginPath();
+    ctx.moveTo(-r*0.35,-r*0.02); ctx.lineTo(r*0.06,-r*0.95); ctx.lineTo(r*0.35,-r*0.02);
+    ctx.closePath(); ctx.fill(); ctx.stroke();
+    ctx.fillStyle='#ffd166';
+    ctx.beginPath(); ctx.arc(r*0.12,-r*0.32,r*0.045,0,Math.PI*2); ctx.fill();
+    ctx.beginPath(); ctx.arc(-r*0.08,-r*0.55,r*0.04,0,Math.PI*2); ctx.fill();
+  } else if(shape==='mohawk'){
+    ctx.beginPath();
+    ctx.moveTo(-r*0.16,r*0.05);
+    ctx.lineTo(-r*0.2,-r*0.32); ctx.lineTo(-r*0.06,-r*0.18);
+    ctx.lineTo(0,-r*0.78); ctx.lineTo(r*0.06,-r*0.18);
+    ctx.lineTo(r*0.2,-r*0.32); ctx.lineTo(r*0.16,r*0.05);
+    ctx.closePath(); ctx.fill(); ctx.stroke();
+  } else if(shape==='dragon'){
+    ctx.beginPath(); ctx.arc(0,r*0.1,r*0.6,Math.PI,0); ctx.fill(); ctx.stroke();
+    ctx.beginPath(); // curved snout crest at the front
+    ctx.moveTo(r*0.3,-r*0.15);
+    ctx.quadraticCurveTo(r*0.78,-r*0.28,r*0.88,-r*0.02);
+    ctx.quadraticCurveTo(r*0.7,r*0.08,r*0.32,r*0.0);
+    ctx.closePath(); ctx.fill(); ctx.stroke();
+    for(let i=0;i<3;i++){
+      const bx=-r*0.08-i*r*0.24, by=-r*0.34-i*r*0.02;
+      ctx.beginPath(); ctx.moveTo(bx,by+r*0.16); ctx.lineTo(bx-r*0.09,by-r*0.16); ctx.lineTo(bx+r*0.1,by);
+      ctx.closePath(); ctx.fill(); ctx.stroke();
+    }
+    ctx.fillStyle='#ff5c3d'; ctx.beginPath(); ctx.arc(r*0.64,-r*0.08,r*0.045,0,Math.PI*2); ctx.fill();
   }
   ctx.restore();
 }
@@ -4002,6 +4363,16 @@ function hatSwatchSvg(shape,color){
     horns: `<path d="M10 18c-1-4 1-9 4-11-2 4-1 7 1 9z" fill="${c}"/><path d="M22 18c1-4-1-9-4-11 2 4 1 7-1 9z" fill="${c}"/>`,
     crown: `<path d="M4 19V11l6 5 6-10 6 10 6-5v8z" fill="${c}"/><circle cx="11" cy="8" r="1.6" fill="#fff"/><circle cx="16" cy="5" r="1.6" fill="#fff"/><circle cx="21" cy="8" r="1.6" fill="#fff"/>`,
     halo: `<ellipse cx="16" cy="9" rx="8" ry="3" fill="none" stroke="${c}" stroke-width="2.4"/>`,
+    visor: `<path d="M5 15a12 8 0 0 1 22 0" fill="none" stroke="${c}" stroke-width="3"/><rect x="14" y="12.5" width="12" height="4" rx="2" fill="${c}"/>`,
+    headphones: `<path d="M5 14a11 9 0 0 1 22 0" fill="none" stroke="${c}" stroke-width="3"/><ellipse cx="5" cy="16" rx="3.2" ry="4.5" fill="${c}"/><ellipse cx="27" cy="16" rx="3.2" ry="4.5" fill="${c}"/>`,
+    bucket: `<ellipse cx="16" cy="20" rx="14" ry="3.6" fill="${c}"/><rect x="7" y="8" width="18" height="12" rx="7" fill="${c}"/>`,
+    bandana: `<path d="M4 18a12 11 0 0 1 24 0z" fill="${c}"/><path d="M27 15l4 2-4 3z" fill="${c}"/>`,
+    pirate: `<path d="M3 17c2-6 8-9 13-9s11 3 13 9c-4 3-9-2-13-2s-9 5-13 2z" fill="${c}"/><circle cx="16" cy="9" r="1.3" fill="#fff"/>`,
+    ninja: `<path d="M4 18a12 11 0 0 1 24 0z" fill="${c}"/><rect x="6" y="14" width="20" height="3" rx="1.5" fill="rgba(0,0,0,.5)"/>`,
+    viking: `<path d="M4 18a12 10 0 0 1 24 0z" fill="${c}"/><path d="M6 12c-3-3-3-7 0-9 0 4 1 6 3 8z" fill="#e8e2d0"/><path d="M26 12c3-3 3-7 0-9 0 4-1 6-3 8z" fill="#e8e2d0"/>`,
+    wizard: `<ellipse cx="16" cy="19" rx="13" ry="3" fill="${c}"/><path d="M9 19L16 3l7 16z" fill="${c}"/><circle cx="17" cy="8" r="1" fill="#ffd166"/><circle cx="14" cy="13" r="1" fill="#ffd166"/>`,
+    mohawk: `<path d="M13 19l-2-9 4 3 1-11 1 11 4-3-2 9z" fill="${c}"/>`,
+    dragon: `<path d="M4 17a12 9 0 0 1 22 0z" fill="${c}"/><path d="M24 10c4-1 7 1 8 4-3 2-6 1-8-1z" fill="${c}"/><path d="M9 9l-3-4 4 1z M13 6l-2-5 4 2z M17 5l0-5 3 3z" fill="${c}"/><circle cx="27" cy="12" r="1" fill="#ff5c3d"/>`,
   };
   return `<svg viewBox="0 0 32 24" width="40" height="30">${shapes[shape]||''}</svg>`;
 }
