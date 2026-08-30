@@ -189,13 +189,13 @@ h1.title{
 .online-btn:hover{border-color:var(--build);}
 .ranked-btn{border-color:var(--gold); margin-bottom:14px; font-size:18px;}
 .ranked-btn:hover{border-color:var(--gold);}
-#rankedRankCard{
+#rankedRankCard, #profileRankCard{
   display:flex; align-items:center; gap:16px; background:var(--surface); border:1px solid var(--line);
   border-radius:10px; padding:16px; margin-bottom:18px;
 }
-#rankedMenuInfo{flex:1; text-align:left;}
-#rankedMenuTierName{font-family:'Rajdhani'; font-weight:700; font-size:18px; margin-bottom:6px;}
-#rankedMenuProgressLabel{font-family:'Rajdhani'; font-size:12px; color:var(--muted); margin-top:4px;}
+#rankedMenuInfo, #profileRankInfo{flex:1; text-align:left;}
+#rankedMenuTierName, #profileRankTierName{font-family:'Rajdhani'; font-weight:700; font-size:18px; margin-bottom:6px;}
+#rankedMenuProgressLabel, #profileRankProgressLabel{font-family:'Rajdhani'; font-size:12px; color:var(--muted); margin-top:4px;}
 #rankedLeaderboardWrap{overflow-x:auto;}
 #rankedLeaderboard{width:100%; border-collapse:collapse; font-family:'Rajdhani'; font-size:13px;}
 #rankedLeaderboard th{
@@ -620,6 +620,14 @@ h1.title{
     <div id="profileView" class="hidden">
       <button class="mode-btn back-btn" data-nav="top">← VOLVER</button>
       <div id="profileNameLine"></div>
+      <div id="profileRankCard">
+        <div class="rk-badge" id="profileRankBadge"></div>
+        <div id="profileRankInfo">
+          <div id="profileRankTierName">Bronze</div>
+          <div class="rk-track"><div class="rk-fill" id="profileRankFill"></div></div>
+          <div id="profileRankProgressLabel"></div>
+        </div>
+      </div>
       <div class="profile-stat-grid">
         <div class="profile-stat"><span class="v" id="profCoins">0</span><span class="l">Monedas</span></div>
         <div class="profile-stat"><span class="v" id="profKills">0</span><span class="l">Bajas totales</span></div>
@@ -1790,6 +1798,16 @@ function renderProfileView(){
   document.getElementById('profMatches').textContent = profile.stats.matchesPlayed;
   document.getElementById('profOwned').textContent = profile.owned.length;
   drawPreviewCanvas(document.getElementById('profilePreview'));
+
+  const prog = rankProgress(profile.ranked.points);
+  document.getElementById('profileRankBadge').innerHTML = rankBadgeSvg(prog.tier);
+  document.getElementById('profileRankTierName').textContent = prog.tier.name;
+  document.getElementById('profileRankTierName').style.color = rankVisualColor(prog.tier);
+  document.getElementById('profileRankFill').style.background = rankVisualColor(prog.tier);
+  document.getElementById('profileRankFill').style.width = prog.pct+'%';
+  document.getElementById('profileRankProgressLabel').textContent = prog.tier.max===Infinity
+    ? Math.round(profile.ranked.points)+' pts (rango máximo)'
+    : Math.round(profile.ranked.points)+' pts · faltan '+Math.round(prog.toNext)+' para el siguiente rango';
 }
 
 function renderRankedView(){
@@ -4006,12 +4024,67 @@ function showEndScreen(){
 // is pure white, which reads as an empty/pale placeholder shield instead of a legendary
 // badge, and Champion's would show pink there instead of the red used everywhere else.
 function rankVisualColor(tier){ return (RANK_IDENTITY[tier.id] && RANK_IDENTITY[tier.id].base) || tier.color; }
+// Eight original, hand-drawn emblems — one per tier, each its own silhouette rather than a
+// single shield recolored eight times. Complexity and visual "weight" escalate with rank
+// (a plain hexagon at Bronze up to a layered starburst at Unreal) so the badge itself reads
+// as a progression at a glance, independent of its color. Every shape is bespoke artwork
+// for Axel's Royale — not a reproduction of any other game's rank iconography.
+const RANK_BADGE_SHAPES = {
+  // Bronze — a plain hexagon with a single center rivet: the simplest possible "you're on
+  // the board" mark.
+  bronze: (c,hi,lo)=>`
+    <path d="M16 4 L26 10 L26 22 L16 28 L6 22 L6 10 Z" fill="${c}" opacity="0.22" stroke="${c}" stroke-width="2" stroke-linejoin="round"/>
+    <circle cx="16" cy="16" r="3" fill="${c}"/>`,
+  // Silver — the same hexagon, now with a rising chevron: the first sign of momentum.
+  silver: (c,hi,lo)=>`
+    <path d="M16 4 L26 10 L26 22 L16 28 L6 22 L6 10 Z" fill="${c}" opacity="0.18" stroke="${c}" stroke-width="2" stroke-linejoin="round"/>
+    <path d="M10 19 L16 13 L22 19" fill="none" stroke="${c}" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"/>`,
+  // Gold — a rounded shield with a four-point sparkle at its heart.
+  gold: (c,hi,lo)=>`
+    <path d="M16 3 L27 9 L24 27 L8 27 L5 9 Z" fill="${c}" opacity="0.2" stroke="${c}" stroke-width="2" stroke-linejoin="round"/>
+    <path d="M16 8 L18.4 13.6 L24 16 L18.4 18.4 L16 24 L13.6 18.4 L8 16 L13.6 13.6 Z" fill="${hi}"/>`,
+  // Platinum — a faceted diamond outline with a bright horizontal cut-line, the first badge
+  // to look like a cut gem rather than a medal.
+  platinum: (c,hi,lo)=>`
+    <path d="M16 4 L28 16 L16 28 L4 16 Z" fill="${c}" opacity="0.18" stroke="${c}" stroke-width="2" stroke-linejoin="round"/>
+    <path d="M16 9 L23 16 L16 23 L9 16 Z" fill="none" stroke="${hi}" stroke-width="1.2" opacity="0.85"/>
+    <line x1="7" y1="16" x2="25" y2="16" stroke="${hi}" stroke-width="1.4" opacity="0.85"/>`,
+  // Diamond — a full gem: crown, girdle and pavilion facets rendered as distinct planes.
+  diamond: (c,hi,lo)=>`
+    <path d="M6 12 L11 6 L21 6 L26 12 Z" fill="${hi}" stroke="${c}" stroke-width="1.2" stroke-linejoin="round"/>
+    <path d="M6 12 L16 27 L26 12 Z" fill="${c}" opacity="0.45" stroke="${c}" stroke-width="1.2" stroke-linejoin="round"/>
+    <path d="M11 6 L16 27 M21 6 L16 27" stroke="${lo}" stroke-width="1" opacity="0.8"/>`,
+  // Elite — a sharp eight-point burst, aggressive and pointed, breaking from the "gem" family.
+  elite: (c,hi,lo)=>`
+    <path d="M16 2 L20 12.5 L30 16 L20 19.5 L16 30 L12 19.5 L2 16 L12 12.5 Z" fill="${c}" opacity="0.3" stroke="${c}" stroke-width="2" stroke-linejoin="round"/>
+    <circle cx="16" cy="16" r="4" fill="none" stroke="${hi}" stroke-width="1.4"/>`,
+  // Champion — a medallion flanked by laurel leaves, the classic mark of a champion made
+  // of two simple leaf ellipses rather than any borrowed crest.
+  champion: (c,hi,lo)=>`
+    <ellipse cx="7.5" cy="17" rx="2.6" ry="7" transform="rotate(-24 7.5 17)" fill="${c}" opacity="0.55"/>
+    <ellipse cx="24.5" cy="17" rx="2.6" ry="7" transform="rotate(24 24.5 17)" fill="${c}" opacity="0.55"/>
+    <circle cx="16" cy="15" r="9" fill="${c}" opacity="0.22" stroke="${c}" stroke-width="2"/>
+    <path d="M12 26 L16 31 L20 26" fill="none" stroke="${c}" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+    <circle cx="16" cy="15" r="3.4" fill="${hi}"/>`,
+  // Unreal — the top tier: a layered eight-point starburst (two overlapping stars at
+  // different scales) with a bright core, reading as strictly more elaborate than every
+  // tier below it.
+  unreal: (c,hi,lo)=>`
+    <path d="M16 1 L19.2 12.8 L31 16 L19.2 19.2 L16 31 L12.8 19.2 L1 16 L12.8 12.8 Z" fill="${c}" opacity="0.42"/>
+    <path d="M16 6.5 L18 14 L25.5 16 L18 18 L16 25.5 L14 18 L6.5 16 L14 14 Z" fill="#ffffff" opacity="0.75"/>
+    <circle cx="16" cy="16" r="2.4" fill="#ffffff"/>`,
+};
 function rankBadgeSvg(tier){
   const c = rankVisualColor(tier);
-  return `<svg viewBox="0 0 32 32" width="100%" height="100%">
-    <path d="M16 2l11 4.5v8c0 8-5 13.6-11 15.5C10 28.1 5 22.5 5 14.5v-8z" fill="none" stroke="${c}" stroke-width="2" stroke-linejoin="round"/>
-    <path d="M16 2l11 4.5v8c0 8-5 13.6-11 15.5z" fill="${c}" opacity="0.28"/>
-  </svg>`;
+  const identity = RANK_IDENTITY[tier.id];
+  const hi = (identity && identity.gradient) ? identity.gradient[0][1] : '#ffffff';
+  const lo = (identity && identity.gradient) ? identity.gradient[identity.gradient.length-1][1] : c;
+  const shape = (RANK_BADGE_SHAPES[tier.id] || RANK_BADGE_SHAPES.bronze)(c, hi, lo);
+  // Higher tiers glow more, echoing the same glowBlur scale used for the rank skin/halo —
+  // a Bronze badge stays flat while Unreal visibly radiates.
+  const glow = identity ? Math.min(5, identity.glowBlur/4) : 0;
+  const style = glow>1.5 ? ` style="filter:drop-shadow(0 0 ${glow.toFixed(1)}px ${c})"` : '';
+  return `<svg viewBox="0 0 32 32" width="100%" height="100%"${style}>${shape}</svg>`;
 }
 
 function showRankedResultsScreen(){
