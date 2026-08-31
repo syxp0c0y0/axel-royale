@@ -1138,7 +1138,11 @@ h1.title{
 
 // ============================== CONFIG ==============================
 const CELL = 48;
-const COLS = 50, ROWS = 34;
+// ~3x the old map area (COLS/ROWS were 50/34) — every match now covers real
+// battle-royale-scale ground. See MAP_LAYOUTS/ringClusters/scatterResourceNodes/
+// scatterWeaponLoot/seedPickups for how the extra space gets genuinely populated
+// rather than just widening empty margins.
+const COLS = 90, ROWS = 58;
 const WORLD_W = COLS*CELL, WORLD_H = ROWS*CELL;
 const PLAYER_R = 17;
 const KILLS_TO_WIN = 5;
@@ -2121,7 +2125,27 @@ function mazeRow(cy, offset, count, spacing){
   for(let i=0;i<count;i++){ const cx = offset+i*spacing; cells.push([cx,cy]); cells.push([cx+1,cy]); }
   return cells;
 }
+// A ring of small POI clusters at a given fraction of the map's radius from center —
+// deterministic (no matchRng, safe inside the static MAP_LAYOUTS table below), used to
+// genuinely fill the extra ground the bigger map now has instead of leaving it as open
+// margin around content that was only ever sized for the old, smaller map. `seedShift`
+// rotates the ring so different layouts/rings don't all land in the same spots.
+function ringClusters(count, fracR, seedShift){
+  const cells = [];
+  const cx0 = Math.floor(COLS/2), cy0 = Math.floor(ROWS/2);
+  const rx = Math.floor(COLS*fracR), ry = Math.floor(ROWS*fracR);
+  for(let i=0;i<count;i++){
+    const a = (i/count)*Math.PI*2 + seedShift;
+    const cx = cx0 + Math.round(Math.cos(a)*rx), cy = cy0 + Math.round(Math.sin(a)*ry);
+    cells.push([cx,cy],[cx+1,cy],[cx,cy+1]);
+  }
+  return cells;
+}
 const MAP_LAYOUTS = {
+  // Every hand-authored layout below keeps its original corner/center shapes (still
+  // recognizable as the same map) and adds 2 full rings of new POI clusters — via
+  // ringClusters() — reaching out into the ground the 3x-bigger map now has, so the extra
+  // space is genuinely populated instead of just wider empty margin around old content.
   clasico: [
     [12,8],[12,9],[13,8],[13,9],
     [COLS-13,8],[COLS-13,9],[COLS-14,8],[COLS-14,9],
@@ -2129,6 +2153,7 @@ const MAP_LAYOUTS = {
     [Math.floor(COLS/2)-1,ROWS-5],[Math.floor(COLS/2),ROWS-5],[Math.floor(COLS/2)+1,ROWS-5],
     [8,ROWS-6],[9,ROWS-6],[COLS-9,ROWS-6],[COLS-10,ROWS-6],
     [8,6],[COLS-9,6],
+    ...ringClusters(8, 0.32, 0), ...ringClusters(6, 0.45, 0.5),
   ],
   cruce: [
     [Math.floor(COLS/2)-1,10],[Math.floor(COLS/2),10],[Math.floor(COLS/2)+1,10],
@@ -2139,6 +2164,7 @@ const MAP_LAYOUTS = {
     [34,Math.floor(ROWS/2)-1],[34,Math.floor(ROWS/2)],
     [6,5],[7,5],[COLS-7,5],[COLS-8,5],
     [6,ROWS-6],[7,ROWS-6],[COLS-7,ROWS-6],[COLS-8,ROWS-6],
+    ...ringClusters(8, 0.30, 0.2), ...ringClusters(8, 0.44, 0.7),
   ],
   islas: [
     [10,7],[11,7],[10,8],
@@ -2148,6 +2174,7 @@ const MAP_LAYOUTS = {
     [Math.floor(COLS/2)-1,Math.floor(ROWS/2)-1],[Math.floor(COLS/2),Math.floor(ROWS/2)-1],
     [Math.floor(COLS/2)-1,Math.floor(ROWS/2)],[Math.floor(COLS/2),Math.floor(ROWS/2)],
     [18,17],[19,17],[COLS-19,17],[COLS-20,17],
+    ...ringClusters(6, 0.34, 0.9), ...ringClusters(8, 0.46, 0.15),
   ],
   // Fortaleza: a hollow fortress ring dead-center, entered only from the north or south —
   // whoever holds the inside controls tight, enclosed combat, while the open ground
@@ -2159,15 +2186,20 @@ const MAP_LAYOUTS = {
     [COLS-8,6],[COLS-9,6],[COLS-8,7],
     [7,ROWS-7],[8,ROWS-7],[7,ROWS-8],
     [COLS-8,ROWS-7],[COLS-9,ROWS-7],[COLS-8,ROWS-8],
+    ...ringClusters(8, 0.30, 0.35), ...ringClusters(6, 0.44, 1.0),
   ],
-  // Laberinto: four staggered bands of short wall segments running most of the map's
-  // width, offset against each other so there's no straight lane in any direction —
-  // constant close-range weaving instead of the open lanes/corners every other layout has.
+  // Laberinto: staggered bands of short wall segments running the map's width, offset
+  // against each other so there's no straight lane in any direction — constant close-range
+  // weaving instead of the open lanes/corners every other layout has. 7 rows x 13 segments
+  // (up from 4x7) to keep the same weave density now that the map is ~3x bigger.
   laberinto: [
-    ...mazeRow(9, 6, 7, 6),
-    ...mazeRow(14, 9, 7, 6),
-    ...mazeRow(19, 6, 7, 6),
-    ...mazeRow(24, 9, 7, 6),
+    ...mazeRow(9, 6, 13, 6),
+    ...mazeRow(16, 9, 13, 6),
+    ...mazeRow(23, 6, 13, 6),
+    ...mazeRow(30, 9, 13, 6),
+    ...mazeRow(37, 6, 13, 6),
+    ...mazeRow(44, 9, 13, 6),
+    ...mazeRow(51, 6, 13, 6),
   ],
   // Centro: a deliberately open (not enclosed) contestable cluster at dead-center, with
   // four staged approach-lane clusters converging on it from N/S/E/W — a control-point
@@ -2181,35 +2213,45 @@ const MAP_LAYOUTS = {
     [Math.floor(COLS/2)-1,ROWS-9],[Math.floor(COLS/2),ROWS-9],
     [12,Math.floor(ROWS/2)-1],[12,Math.floor(ROWS/2)],
     [COLS-13,Math.floor(ROWS/2)-1],[COLS-13,Math.floor(ROWS/2)],
+    ...ringClusters(8, 0.28, 0.25), ...ringClusters(8, 0.44, 0.85),
   ],
   // Lago: a big central lake (kept clear of walls here — see MAP_AVOID_ZONES/generateTerrain
-  // for the actual water) ringed by four small house clusters, with short dock stubs poking
-  // out from the north/south shore toward the water.
+  // for the actual water) ringed by 8 house clusters spread all the way around the shore,
+  // with dock stubs poking out from four sides toward the water.
   lago: [
-    ...rectRingCells(12,8,3,2,'ns'), ...rectRingCells(38,8,3,2,'ns'),
-    ...rectRingCells(12,26,3,2,'ns'), ...rectRingCells(38,26,3,2,'ns'),
-    [22,11],[22,12],[22,13], [28,11],[28,12],[28,13],
-    [22,22],[22,23],[22,24], [28,22],[28,23],[28,24],
-    [17,17],[33,17],[25,9],[25,25],
+    ...rectRingCells(62,29,3,2,'ns'), ...rectRingCells(57,41,3,2,'ns'),
+    ...rectRingCells(45,46,3,2,'ns'), ...rectRingCells(33,41,3,2,'ns'),
+    ...rectRingCells(28,29,3,2,'ns'), ...rectRingCells(33,17,3,2,'ns'),
+    ...rectRingCells(45,12,3,2,'ns'), ...rectRingCells(57,17,3,2,'ns'),
+    [45,19],[45,20],[45,21], [45,37],[45,38],[45,39],
+    [35,29],[36,29],[37,29], [53,29],[54,29],[55,29],
+    [40,22],[50,22],[40,36],[50,36],
   ],
   // Piscina/casa: one large multi-room house (hollow ring + interior partitions) with a
-  // pool courtyard (kept clear here — see MAP_AVOID_ZONES/generateTerrain) framed by
-  // poolside furniture, patio furniture along the house's outer walls.
+  // second, smaller pool-house structure and a much bigger pool courtyard (kept clear
+  // here — see MAP_AVOID_ZONES/generateTerrain), framed by patio/poolside furniture.
   piscina: [
-    ...rectRingCells(16,17,8,6,'ns'),
-    [16,13],[16,14],[16,15], [10,17],[11,17],[12,17], [20,20],[20,21],[20,22],
-    [26,12],[27,12],[26,22],[27,22],
-    [30,14],[34,14],[30,20],[34,20],
+    ...rectRingCells(28,29,14,10,'ns'),
+    [28,21],[28,22],[28,23], [28,35],[28,36],[28,37],
+    [16,29],[17,29],[18,29], [40,24],[40,25],[40,26], [40,32],[40,33],[40,34],
+    [22,19],[22,20], [22,38],[22,39],
+    ...rectRingCells(50,20,3,2,'ns'), ...rectRingCells(50,38,3,2,'ns'),
+    [46,22],[47,22],[46,36],[47,36],
+    [54,18],[62,18],[54,40],[62,40],
+    [58,20],[58,38],
   ],
-  // Casa millonaria: a sprawling multi-room mansion (hollow ring + wing partitions), a
-  // small separate garage structure, a pool/terrace to the east (kept clear here — see
-  // MAP_AVOID_ZONES/generateTerrain) framed by terrace furniture, garden hedges as cover.
+  // Casa millonaria: a sprawling multi-wing mansion (hollow ring + wing partitions), a
+  // separate garage AND a smaller guest house, and a pool/terrace grounds to the east (kept
+  // clear here — see MAP_AVOID_ZONES/generateTerrain) framed by garden hedges/terrace cover.
   mansion: [
-    ...rectRingCells(30,17,10,7,'ns'),
-    [30,11],[30,12],[30,13],[30,14], [24,17],[25,17], [35,17],[36,17], [30,20],[30,21],[30,22],[30,23],
-    ...rectRingCells(14,26,3,2,'ns'),
-    [10,12],[11,12],[10,22],[11,22], [16,8],[17,8],[16,26],[17,26],
-    [42,15],[46,15],[42,19],[46,19],
+    ...rectRingCells(45,29,18,12,'ns'),
+    [45,17],[45,18],[45,19],[45,20], [45,38],[45,39],[45,40],[45,41],
+    [33,29],[34,29],[35,29], [55,29],[56,29],[57,29],
+    [39,22],[39,23], [39,35],[39,36], [51,22],[51,23], [51,35],[51,36],
+    ...rectRingCells(20,45,4,3,'ns'),
+    ...rectRingCells(20,13,3,2,'ns'),
+    [14,20],[15,20],[14,38],[15,38], [24,10],[25,10],[24,48],[25,48],
+    [68,20],[71,20],[68,38],[71,38],
   ],
 };
 const MAP_NAMES = {
@@ -2222,9 +2264,9 @@ const MAP_NAMES = {
 // scatterWeaponLoot (so nothing spawns floating in the water). Maps not listed here have
 // no special zone — resource/loot scatter covers their whole footprint as before.
 const MAP_AVOID_ZONES = {
-  lago:    {cx:25*CELL, cy:17*CELL, r:6.2*CELL},
-  piscina: {cx:32*CELL, cy:17*CELL, r:3.2*CELL},
-  mansion: {cx:44*CELL, cy:17*CELL, r:2.6*CELL},
+  lago:    {cx:45*CELL, cy:29*CELL, r:9.5*CELL},
+  piscina: {cx:58*CELL, cy:29*CELL, r:5.5*CELL},
+  mansion: {cx:78*CELL, cy:29*CELL, r:4.5*CELL},
 };
 let currentMapKey = 'clasico';
 // Avoid the same layout landing twice in a row when others are available — a light
@@ -2305,8 +2347,10 @@ function buildBoundaryWalls(mapKey, extraCover){
   if(mode!=='online' && mode!=='spectate') lastMapKey = currentMapKey;
   MAP_LAYOUTS[currentMapKey].forEach(([cx,cy])=>{ if(cx!=null&&cy!=null) placeCrate(cx,cy); });
   if(extraCover){
-    // extra scattered clusters spread across the map for a richer battle-royale field
-    const cols=6, rows=4, marginX=6, marginY=5;
+    // extra scattered clusters spread across the map for a richer battle-royale field —
+    // grid resolution scaled up so cluster spacing stays about the same now that the map
+    // itself is ~3x bigger, instead of the same 24 slots spreading much thinner.
+    const cols=11, rows=7, marginX=6, marginY=5;
     for(let gx=0; gx<cols; gx++){
       for(let gy=0; gy<rows; gy++){
         if(matchRng()<0.45) continue;
@@ -2316,16 +2360,18 @@ function buildBoundaryWalls(mapKey, extraCover){
       }
     }
   }
-  // A couple of standalone house-cover POIs, independent of the hand-authored layout —
-  // purely additive, so existing cover density/balance for every mode is unchanged.
-  const houseCount = extraCover? 3 : 2;
+  // A handful of standalone house-cover POIs, independent of the hand-authored layout —
+  // purely additive, so existing cover density/balance for every mode is unchanged. Counts
+  // scaled up (~3x) alongside the map so standalone POIs stay just as common per unit area.
+  const houseCount = extraCover? 9 : 5;
   for(let i=0;i<houseCount;i++){
     placeHouseRing(6+Math.floor(matchRng()*(COLS-12)), 6+Math.floor(matchRng()*(ROWS-12)));
   }
   // Battle Royale only: a balanced spread of harvestable resource nodes across the whole
   // map (every layout, old and new) — gated identically on every peer of a synced match
-  // since isAnyRankedMatch() reads mode/onlineRankedMode, which are already in sync.
-  if(isAnyRankedMatch()) scatterResourceNodes(70);
+  // since isAnyRankedMatch() reads mode/onlineRankedMode, which are already in sync. Count
+  // scaled up (~3x) to match the bigger map's area so density per zone stays the same.
+  if(isAnyRankedMatch()) scatterResourceNodes(215);
   generateTerrain();
 }
 
@@ -2378,22 +2424,59 @@ function drawRockProp(tctx, x, y){
   tctx.fillStyle = '#565f6b'; tctx.fill();
   tctx.strokeStyle='rgba(0,0,0,0.3)'; tctx.lineWidth=1.5; tctx.stroke();
 }
+// A rocky highland patch (grey-brown, mountain-flavored) with a dense knot of rock props on
+// top — one of the two new biome types (alongside forestPatch) added so the ~3x-bigger map
+// reads as "montañas, bosques" and not just more of the same flat scatter.
+function mountainPatch(tctx, cx, cy, r){
+  drawBlob(tctx, cx, cy, r*1.1, '#3a3a3a', '#2a2a28');
+  drawBlob(tctx, cx, cy, r*0.7, '#4d4d48', null);
+  const rockN = 8+Math.floor(matchRng()*6);
+  for(let i=0;i<rockN;i++){
+    const a=matchRng()*Math.PI*2, rr=matchRng()*r*0.85;
+    drawRockProp(tctx, cx+Math.cos(a)*rr, cy+Math.sin(a)*rr);
+  }
+}
+// A dense forest patch — a dark-green blob with a thick cluster of tree props, distinct from
+// the light, evenly-scattered trees the generic prop pass below already sprinkles everywhere.
+function forestPatch(tctx, cx, cy, r){
+  drawBlob(tctx, cx, cy, r*1.05, '#1f3a22', '#16281a');
+  const treeN = 14+Math.floor(matchRng()*10);
+  for(let i=0;i<treeN;i++){
+    const a=matchRng()*Math.PI*2, rr=matchRng()*r*0.9;
+    drawTreeProp(tctx, cx+Math.cos(a)*rr, cy+Math.sin(a)*rr);
+  }
+}
 function generateTerrain(){
   const tctx = terrainCtx();
   tctx.clearRect(0,0,WORLD_W,WORLD_H);
   tctx.fillStyle = '#182a1c';
   tctx.fillRect(0,0,WORLD_W,WORLD_H);
-  for(let i=0;i<70;i++){
+  // Counts below are scaled roughly 3x from the original (smaller-map) values to keep the
+  // same visual density now that the map covers ~3x the area — see the COLS/ROWS comment.
+  for(let i=0;i<210;i++){
     const x=matchRng()*WORLD_W, y=matchRng()*WORLD_H, r=30+matchRng()*70;
     tctx.beginPath(); tctx.arc(x,y,r,0,Math.PI*2);
     tctx.fillStyle = matchRng()<0.5? 'rgba(255,255,255,0.015)':'rgba(0,0,0,0.05)';
     tctx.fill();
   }
-  const dirtN = 2+Math.floor(matchRng()*2);
+  const dirtN = 6+Math.floor(matchRng()*4);
   for(let i=0;i<dirtN;i++){
     drawBlob(tctx, 200+matchRng()*(WORLD_W-400), 200+matchRng()*(WORLD_H-400), 130+matchRng()*110, '#4a3a2a', '#3a2d20');
   }
-  drawBlob(tctx, 200+matchRng()*(WORLD_W-400), 200+matchRng()*(WORLD_H-400), 140+matchRng()*90, '#5c5232', '#493f26');
+  const sandN = 2+Math.floor(matchRng()*2);
+  for(let i=0;i<sandN;i++){
+    drawBlob(tctx, 200+matchRng()*(WORLD_W-400), 200+matchRng()*(WORLD_H-400), 140+matchRng()*90, '#5c5232', '#493f26');
+  }
+  // Mountains + forests: a handful of each, scattered away from the map's very center so
+  // they read as distinct regions to travel through/around rather than clutter near spawn.
+  const mountainN = 2+Math.floor(matchRng()*3);
+  for(let i=0;i<mountainN;i++){
+    mountainPatch(tctx, 250+matchRng()*(WORLD_W-500), 250+matchRng()*(WORLD_H-500), 150+matchRng()*110);
+  }
+  const forestN = 3+Math.floor(matchRng()*3);
+  for(let i=0;i<forestN;i++){
+    forestPatch(tctx, 250+matchRng()*(WORLD_W-500), 250+matchRng()*(WORLD_H-500), 130+matchRng()*100);
+  }
   if(currentMapKey==='lago'){
     // The map's namesake: a real, large central lake — deliberately centered on the exact
     // zone scatterResourceNodes/scatterWeaponLoot already keep clear, so the water and the
@@ -2411,10 +2494,14 @@ function generateTerrain(){
     drawBlob(tctx, wx, wy, wr+18, '#3a4a2f', null);
     drawBlob(tctx, wx, wy, wr, '#1f4a5c', '#173a48');
   }
-  const pts=[];
-  for(let i=0;i<3;i++) pts.push({x:180+matchRng()*(WORLD_W-360), y:180+matchRng()*(WORLD_H-360)});
-  for(let i=0;i<pts.length-1;i++) drawRoadSeg(tctx, pts[i].x,pts[i].y, pts[i+1].x,pts[i+1].y);
-  const propCount = 90;
+  // Two independent winding roads (up from one) — more than one real route between zones,
+  // instead of a single forced lane across the whole bigger map.
+  for(let road=0; road<2; road++){
+    const pts=[];
+    for(let i=0;i<5;i++) pts.push({x:180+matchRng()*(WORLD_W-360), y:180+matchRng()*(WORLD_H-360)});
+    for(let i=0;i<pts.length-1;i++) drawRoadSeg(tctx, pts[i].x,pts[i].y, pts[i+1].x,pts[i+1].y);
+  }
+  const propCount = 260;
   for(let i=0;i<propCount;i++){
     const cx = 2+Math.floor(matchRng()*(COLS-4)), cy = 2+Math.floor(matchRng()*(ROWS-4));
     if(solids.has(cellKey(cx,cy))) continue;
@@ -2431,22 +2518,31 @@ const PICKUP_RESPAWN_MS = 25000;
 let pickups = [];
 
 function seedPickups(){
+  // Fractions of COLS/ROWS rather than fixed cell numbers, so these spread across whatever
+  // the map's current size is instead of clustering in what used to be the middle of a much
+  // smaller map. 20 spots (up from 10) to keep density up now the map is ~3x bigger.
   const spots = [
-    {cx:18,cy:10,type:'shield',amount:2}, {cx:32,cy:10,type:'shield',amount:2},
-    {cx:18,cy:24,type:'shield',amount:2}, {cx:32,cy:24,type:'shield',amount:2},
-    {cx:25,cy:6, type:'shield',amount:1}, {cx:25,cy:28,type:'shield',amount:1},
-    {cx:10,cy:17,type:'medkit',amount:1}, {cx:40,cy:17,type:'medkit',amount:1},
-    {cx:25,cy:17,type:'medkit',amount:1}, {cx:15,cy:12,type:'medkit',amount:1},
+    {fx:0.20,fy:0.18,type:'shield',amount:2}, {fx:0.50,fy:0.10,type:'shield',amount:1},
+    {fx:0.80,fy:0.18,type:'shield',amount:2}, {fx:0.15,fy:0.50,type:'medkit',amount:1},
+    {fx:0.35,fy:0.35,type:'shield',amount:1}, {fx:0.65,fy:0.35,type:'shield',amount:1},
+    {fx:0.50,fy:0.50,type:'medkit',amount:1}, {fx:0.85,fy:0.50,type:'medkit',amount:1},
+    {fx:0.35,fy:0.65,type:'shield',amount:1}, {fx:0.65,fy:0.65,type:'shield',amount:1},
+    {fx:0.20,fy:0.82,type:'shield',amount:2}, {fx:0.50,fy:0.90,type:'shield',amount:1},
+    {fx:0.80,fy:0.82,type:'shield',amount:2}, {fx:0.30,fy:0.25,type:'medkit',amount:1},
+    {fx:0.70,fy:0.25,type:'medkit',amount:1}, {fx:0.30,fy:0.75,type:'medkit',amount:1},
+    {fx:0.70,fy:0.75,type:'medkit',amount:1}, {fx:0.10,fy:0.30,type:'medkit',amount:1},
+    {fx:0.90,fy:0.30,type:'medkit',amount:1}, {fx:0.50,fy:0.70,type:'medkit',amount:1},
   ];
   pickups = spots.map((s,i)=>({
-    id:'pk'+i, x:s.cx*CELL+CELL/2, y:s.cy*CELL+CELL/2, kind:'consumable', type:s.type, amount:s.amount,
-    active:true, respawnAt:0,
+    id:'pk'+i, x:Math.round(s.fx*COLS)*CELL+CELL/2, y:Math.round(s.fy*ROWS)*CELL+CELL/2,
+    kind:'consumable', type:s.type, amount:s.amount, active:true, respawnAt:0,
   }));
   // Battle Royale only: since fighters now start with nothing but a pickaxe, weapons/ammo
   // must be found on the ground — reuses this exact same walk-over pickup system, just a
   // new kind that never respawns once taken (a finite, explorable loot pool, not an
-  // infinite cycling one like the shield/medkit spots above).
-  if(isAnyRankedMatch()) scatterWeaponLoot(40);
+  // infinite cycling one like the shield/medkit spots above). Count scaled up (~3x)
+  // alongside the map's area.
+  if(isAnyRankedMatch()) scatterWeaponLoot(120);
 }
 
 // Rarer/stronger weapons show up less often — "el loot debe estar equilibrado" — without
@@ -3970,18 +4066,22 @@ function applyRankedMatchEnd(placement){
 // instead of ~100 seconds; early damage is gentle (2 dps won't kill fast) and only escalates
 // hard in the last couple of phases, forcing an eventual endgame without punishing early
 // exploration.
+// Timings scaled ~1.4x from the previous table — the map is ~1.8x longer edge-to-edge now
+// (COLS/ROWS grew 50/34 -> 90/58), so relocating between zone shrinks takes real travel
+// time; dps per phase is untouched (that's about how punishing being caught outside is,
+// not about how far you have to walk).
 const ZONE_PHASES = [
   {t:0,      frac:1.00, dps:0},
-  {t:90000,  frac:1.00, dps:0},
-  {t:150000, frac:0.65, dps:2},
+  {t:130000, frac:1.00, dps:0},
   {t:210000, frac:0.65, dps:2},
-  {t:270000, frac:0.40, dps:4},
-  {t:330000, frac:0.40, dps:4},
-  {t:390000, frac:0.22, dps:7},
-  {t:440000, frac:0.22, dps:7},
-  {t:490000, frac:0.08, dps:11},
-  {t:530000, frac:0.08, dps:11},
-  {t:570000, frac:0.0,  dps:18},
+  {t:295000, frac:0.65, dps:2},
+  {t:380000, frac:0.40, dps:4},
+  {t:460000, frac:0.40, dps:4},
+  {t:545000, frac:0.22, dps:7},
+  {t:615000, frac:0.22, dps:7},
+  {t:685000, frac:0.08, dps:11},
+  {t:740000, frac:0.08, dps:11},
+  {t:800000, frac:0.0,  dps:18},
 ];
 let rankedZone = null; // {cx, cy, baseR, radius, dps, nextT, shrinking}
 function initRankedZone(){
@@ -4370,12 +4470,12 @@ function botThink(self, dt){
       self.aiState='zoneRush'; self._wantFire=false;
       self._moveDir = Math.atan2(rankedZone.cy-self.y, rankedZone.cx-self.x);
     } else if(unarmed){
-      const wpk = nearestWeaponPickupFor(self, 2600);
+      const wpk = nearestWeaponPickupFor(self, 4700); // scaled ~1.8x with the map so bots can still "see" loot across the bigger world
       if(wpk){
         self.aiState='seekWeapon'; self._wantFire=false; self.aiHarvestTarget=null;
         self._moveDir = Math.atan2(wpk.y-self.y, wpk.x-self.x);
       } else {
-        const node = nearestResourceNodeFor(self, 900);
+        const node = nearestResourceNodeFor(self, 1600);
         if(node){
           self.aiState='harvest'; self._wantFire=false; self.aiHarvestTarget=node;
           const nx=node.cx*CELL+CELL/2, ny=node.cy*CELL+CELL/2;
@@ -4387,10 +4487,10 @@ function botThink(self, dt){
       }
     } else {
       self.aiState='wander'; self._wantFire=false;
-      const loot = nearestActivePickupFor(self, 1400);
+      const loot = nearestActivePickupFor(self, 2500);
       if(loot){ self._moveDir = Math.atan2(loot.y-self.y, loot.x-self.x); self.aiHarvestTarget=null; }
       else {
-        const node = isAnyRankedMatch() && self.mats<150 ? nearestResourceNodeFor(self, 700) : null;
+        const node = isAnyRankedMatch() && self.mats<150 ? nearestResourceNodeFor(self, 1250) : null;
         if(node){
           self.aiState='harvest'; self.aiHarvestTarget=node;
           const nx=node.cx*CELL+CELL/2, ny=node.cy*CELL+CELL/2;
@@ -4407,7 +4507,7 @@ function botThink(self, dt){
 
   if(unarmed){
     self.aiState='seekWeapon'; self._wantFire=false;
-    const wpk = nearestWeaponPickupFor(self, 2600);
+    const wpk = nearestWeaponPickupFor(self, 4700); // scaled ~1.8x with the map so bots can still "see" loot across the bigger world
     if(wpk){ self._moveDir = Math.atan2(wpk.y-self.y, wpk.x-self.x); }
     else { self._moveDir = Math.atan2(self.y-target.y, self.x-target.x); } // no gun in sight — just run
     detectStuck(self);
