@@ -47,6 +47,12 @@ html,body{
   pointer-events:none;
 }
 .bar-row{display:flex; align-items:center; gap:8px;}
+#resourceRow{display:flex; gap:6px; margin-left:42px;}
+.res-chip{
+  font-family:'Rajdhani'; font-weight:700; font-size:11px; color:var(--ink);
+  background:var(--surface); border:1px solid var(--line); border-radius:5px; padding:2px 6px;
+  font-variant-numeric:tabular-nums;
+}
 .bar-label{width:34px; font-size:12px; color:var(--muted); text-transform:uppercase; letter-spacing:.08em;}
 .bar-track{flex:1; height:14px; background:var(--surface); border:1px solid var(--line); border-radius:4px; overflow:hidden; position:relative;}
 .bar-fill{height:100%; border-radius:3px; transition:width .12s ease;}
@@ -694,6 +700,11 @@ h1.title{
   </div>
   <div class="bar-row"><span class="bar-label hud-font">MAT.</span>
     <div class="bar-track"><div class="bar-fill mats" id="matsFill" style="width:66%"></div><span class="bar-num" id="matsNum">200</span></div>
+  </div>
+  <div id="resourceRow">
+    <span class="res-chip" id="resWoodChip">🌲 <span id="resWoodNum">0</span></span>
+    <span class="res-chip" id="resStoneChip">🪨 <span id="resStoneNum">0</span></span>
+    <span class="res-chip" id="resMetalChip">🔩 <span id="resMetalNum">0</span></span>
   </div>
 </div>
 
@@ -1759,6 +1770,7 @@ function makeFighter(isBot){
     shield:0, maxShield:50,
     inventory:{shield:0, medkit:0}, consumableIdx:-1, usingItem:null, channelProgress:null,
     mats: isBot? 240:200, maxMats:300,
+    wood:0, stone:0, metal:0, // per-type resource counters (BR only) — f.mats stays the shared pool everything else already reads
     weaponIdx:0, buildIdx:-1, // -1 = weapon mode
     clip: WEAPONS.map(w=>w.clip),
     reserve: WEAPONS.map(w=>Math.floor(w.reserveMax*0.6)),
@@ -1767,10 +1779,23 @@ function makeFighter(isBot){
     kills:0, deaths:0, shotsFired:0, shotsHit:0,
     speed: 220,
     aiState:'approach', aiNextDecision:0, aiTargetCell:null, aiTarget:null,
+    aiHarvestTarget:null, aiLootTarget:null, aiNextWander:0,
     _moveDir:null, _wantFire:false, _aimNoise:0, _consumeDecision:null,
     flankBias:(Math.random()-0.5)*1.3, _stuckTicks:0, _lastDecisionPos:null,
     netTarget:null,
   };
+}
+
+// Battle Royale matches (local ranked Solo/Dúos/Tríos + ranked-with-friends) start every
+// fighter with nothing but a pickaxe — no gun, no ammo, no materials — so weapons and
+// resources must be found/harvested during the match. Called ONCE at BR match setup only
+// (never mid-match: BR is permadeath, no respawns to re-arm through). Every other mode
+// (Práctica, 1v1, 2v2, plain online) never calls this and keeps its exact prior behavior.
+function stripLoadoutForBR(f){
+  f.clip = WEAPONS.map(()=>0);
+  f.reserve = WEAPONS.map(()=>0);
+  f.mats = 0;
+  f.wood = 0; f.stone = 0; f.metal = 0;
 }
 
 function teamKills(team){
@@ -1867,6 +1892,7 @@ function setupRankedMatch(m){
       spawnFighter(f, f.spawnPos, f.spawnPos.angle, {respawn:true});
     }
   }
+  activeFighters.forEach(stripLoadoutForBR);
 
   rankedMatch = {
     modeCfg:cfg, tier, entryCost, scored,
@@ -1936,6 +1962,7 @@ function setupOnlineRankedMatch(){
       spawnFighter(f, f.spawnPos, f.spawnPos.angle, {respawn:true});
     }
   }
+  activeFighters.forEach(stripLoadoutForBR);
 
   rankedMatch = {
     // Ranked-with-friends is never affected by the Lobby's local Ranked ON/OFF toggle —
@@ -2147,6 +2174,38 @@ function placeHouseRing(cx0, cy0){
   });
 }
 
+// ============================== RESOURCE NODES (BR pickaxe harvesting) ==============================
+// Trees/rocks/metal objects: harvestable via the same pickaxe action (pickAt) that already
+// demolishes crates/walls — same solids/hp/collision machinery, just three new piece types
+// that additionally pay out materials on every hit (see pickAt). Destroyed nodes never
+// respawn within a match, exactly like crates already behave.
+const RESOURCE_NODE_CONFIG = {
+  tree:    {key:'wood',  cap:400, yieldPerHit:14, hp:260, hex:'#3c7a41', icon:'🌲', label:'Madera'},
+  rock:    {key:'stone', cap:400, yieldPerHit:16, hp:320, hex:'#8b95a3', icon:'🪨', label:'Piedra'},
+  metalobj:{key:'metal', cap:400, yieldPerHit:12, hp:380, hex:'#9aa7b8', icon:'🔩', label:'Metal'},
+};
+function placeResourceNode(cx,cy,type){
+  const k = cellKey(cx,cy);
+  if(cx<1||cy<1||cx>=COLS-1||cy>=ROWS-1) return false;
+  if(solids.has(k)) return false;
+  const cfg = RESOURCE_NODE_CONFIG[type];
+  solids.set(k, {cx,cy,type,hp:cfg.hp,maxHp:cfg.hp,half:false,owner:null,hex:cfg.hex});
+  return true;
+}
+// Scatters a balanced mix of all three resource types across the whole map — called for
+// EVERY layout (old and new alike) so no map ever ends up with only one resource type.
+function scatterResourceNodes(count){
+  const types = ['tree','tree','rock','rock','metalobj']; // trees/rocks a bit more common than metal props
+  let placed = 0, attempts = 0;
+  while(placed<count && attempts<count*10){
+    attempts++;
+    const cx = 2+Math.floor(matchRng()*(COLS-4));
+    const cy = 2+Math.floor(matchRng()*(ROWS-4));
+    const type = types[Math.floor(matchRng()*types.length)];
+    if(placeResourceNode(cx,cy,type)) placed++;
+  }
+}
+
 function buildBoundaryWalls(mapKey, extraCover){
   const keys = Object.keys(MAP_LAYOUTS);
   let picked = MAP_LAYOUTS[mapKey]? mapKey : keys[Math.floor(matchRng()*keys.length)];
@@ -2179,6 +2238,10 @@ function buildBoundaryWalls(mapKey, extraCover){
   for(let i=0;i<houseCount;i++){
     placeHouseRing(6+Math.floor(matchRng()*(COLS-12)), 6+Math.floor(matchRng()*(ROWS-12)));
   }
+  // Battle Royale only: a balanced spread of harvestable resource nodes across the whole
+  // map (every layout, old and new) — gated identically on every peer of a synced match
+  // since isAnyRankedMatch() reads mode/onlineRankedMode, which are already in sync.
+  if(isAnyRankedMatch()) scatterResourceNodes(70);
   generateTerrain();
 }
 
@@ -2280,12 +2343,44 @@ function seedPickups(){
     {cx:25,cy:17,type:'medkit',amount:1}, {cx:15,cy:12,type:'medkit',amount:1},
   ];
   pickups = spots.map((s,i)=>({
-    id:'pk'+i, x:s.cx*CELL+CELL/2, y:s.cy*CELL+CELL/2, type:s.type, amount:s.amount,
+    id:'pk'+i, x:s.cx*CELL+CELL/2, y:s.cy*CELL+CELL/2, kind:'consumable', type:s.type, amount:s.amount,
     active:true, respawnAt:0,
   }));
+  // Battle Royale only: since fighters now start with nothing but a pickaxe, weapons/ammo
+  // must be found on the ground — reuses this exact same walk-over pickup system, just a
+  // new kind that never respawns once taken (a finite, explorable loot pool, not an
+  // infinite cycling one like the shield/medkit spots above).
+  if(isAnyRankedMatch()) scatterWeaponLoot(40);
+}
+
+// Rarer/stronger weapons show up less often — "el loot debe estar equilibrado" — without
+// touching WEAPONS itself or anything about how the weapons already work.
+const WEAPON_LOOT_WEIGHTS = {pistol:30, smg:26, pump:22, ar:14, sniper:8};
+function pickWeightedWeapon(){
+  const total = WEAPONS.reduce((s,w)=>s+(WEAPON_LOOT_WEIGHTS[w.id]||10), 0);
+  let r = matchRng()*total;
+  for(const w of WEAPONS){
+    r -= (WEAPON_LOOT_WEIGHTS[w.id]||10);
+    if(r<=0) return w;
+  }
+  return WEAPONS[0];
+}
+function scatterWeaponLoot(count){
+  let placed = 0, attempts = 0;
+  while(placed<count && attempts<count*8){
+    attempts++;
+    const cx = 2+Math.floor(matchRng()*(COLS-4)), cy = 2+Math.floor(matchRng()*(ROWS-4));
+    if(solids.has(cellKey(cx,cy))) continue;
+    const x = cx*CELL+CELL/2, y = cy*CELL+CELL/2;
+    if(pickups.some(p=>Math.abs(p.x-x)<CELL*0.7 && Math.abs(p.y-y)<CELL*0.7)) continue;
+    const w = pickWeightedWeapon();
+    pickups.push({id:'wpk'+placed, x, y, kind:'weapon', type:w.id, amount:1, active:true, respawnAt:0});
+    placed++;
+  }
 }
 
 function tryCollectPickup(pk, f){
+  if(pk.kind==='weapon'){ tryCollectWeaponPickup(pk, f); return; }
   const c = CONSUMABLES.find(cc=>cc.id===pk.type);
   const cur = f.inventory[pk.type]||0;
   if(cur>=c.maxStack) return; // full — leave it on the ground
@@ -2294,6 +2389,26 @@ function tryCollectPickup(pk, f){
   f.inventory[pk.type] = Math.min(c.maxStack, cur+pk.amount);
   spawnSparks(pk.x,pk.y, c.hex, 12);
   if(f===player) floatTexts.push({x:pk.x,y:pk.y-18,txt:'+'+pk.amount+' '+c.name,t:0,color:c.hex});
+  if(mode==='online' && (f===player || f.isBot)) sendGame({k:'pk', id:pk.id});
+}
+// Weapon ground loot: first pickup of a gun grants it loaded+part-stocked; picking up the
+// same gun again tops off its reserve — the same "find it, then find more ammo for it"
+// loop, without needing a separate ammo-crate pickup type.
+function tryCollectWeaponPickup(pk, f){
+  const wi = WEAPONS.findIndex(w=>w.id===pk.type);
+  if(wi<0) return;
+  const w = WEAPONS[wi];
+  const hadWeapon = f.clip[wi]>0 || f.reserve[wi]>0;
+  pk.active = false;
+  pk.respawnAt = Infinity; // weapon loot never respawns — a finite pool to explore for
+  if(!hadWeapon){
+    f.clip[wi] = w.clip;
+    f.reserve[wi] = Math.floor(w.reserveMax*0.4);
+  } else {
+    f.reserve[wi] = Math.min(w.reserveMax, f.reserve[wi]+Math.floor(w.reserveMax*0.35));
+  }
+  spawnSparks(pk.x,pk.y, w.color, 12);
+  if(f===player) floatTexts.push({x:pk.x,y:pk.y-18,txt:(hadWeapon?'+Munición ':'')+w.name,t:0,color:w.color});
   if(mode==='online' && (f===player || f.isBot)) sendGame({k:'pk', id:pk.id});
 }
 
@@ -3313,7 +3428,7 @@ function handleGameMessage(data){
     case 'pk': {
       // rival collected this pickup on their client — remove it here too, no inventory granted
       const pk = pickups.find(p=>p.id===data.id);
-      if(pk && pk.active){ pk.active=false; pk.respawnAt = time+PICKUP_RESPAWN_MS; }
+      if(pk && pk.active){ pk.active=false; pk.respawnAt = pk.kind==='weapon'? Infinity : time+PICKUP_RESPAWN_MS; }
       break;
     }
     case 'lobbyInfo': {
@@ -3747,19 +3862,25 @@ function applyRankedMatchEnd(placement){
 // in ms, frac: safe-zone radius as a fraction of the base radius} checkpoints — the radius
 // interpolates smoothly between consecutive checkpoints; dps (damage/sec to whoever's
 // outside) only changes at the START of each shrink, matching how real BR storms feel.
-// Compressed to actually matter for how fast local bot-vs-bot Battle Royale matches
-// resolve — the original 22s grace + slow shrink meant most matches ended before the
-// zone ever restricted a meaningful area, which read as "the zone doesn't do anything".
+// Slowed down deliberately (a much longer grace period, and every shrink/hold stretched
+// out) now that matches start with nothing but a pickaxe and are meant to feel like a real
+// Battle Royale — looting, gathering materials, and fighting all need real time before the
+// storm should ever force the issue. Total runtime to full closure is now ~9.5 minutes
+// instead of ~100 seconds; early damage is gentle (2 dps won't kill fast) and only escalates
+// hard in the last couple of phases, forcing an eventual endgame without punishing early
+// exploration.
 const ZONE_PHASES = [
   {t:0,      frac:1.00, dps:0},
-  {t:10000,  frac:1.00, dps:0},
-  {t:24000,  frac:0.55, dps:3},
-  {t:36000,  frac:0.55, dps:3},
-  {t:50000,  frac:0.30, dps:6},
-  {t:62000,  frac:0.30, dps:6},
-  {t:76000,  frac:0.12, dps:10},
-  {t:88000,  frac:0.12, dps:10},
-  {t:102000, frac:0.0,  dps:16},
+  {t:90000,  frac:1.00, dps:0},
+  {t:150000, frac:0.65, dps:2},
+  {t:210000, frac:0.65, dps:2},
+  {t:270000, frac:0.40, dps:4},
+  {t:330000, frac:0.40, dps:4},
+  {t:390000, frac:0.22, dps:7},
+  {t:440000, frac:0.22, dps:7},
+  {t:490000, frac:0.08, dps:11},
+  {t:530000, frac:0.08, dps:11},
+  {t:570000, frac:0.0,  dps:18},
 ];
 let rankedZone = null; // {cx, cy, baseR, radius, dps, nextT, shrinking}
 function initRankedZone(){
@@ -4002,7 +4123,18 @@ function pickAt(f){
   const range = 90;
   const res = raySolids(f.x,f.y,f.angle,range,f,6);
   if(res.hit && res.kind==='piece'){
-    damagePiece(res.piece, 90, res.x,res.y);
+    const piece = res.piece;
+    // Resource nodes (BR only) additionally pay out materials on every hit — the demolish
+    // damage itself (90, below) stays identical for every piece type, crates/walls included.
+    const cfg = RESOURCE_NODE_CONFIG[piece.type];
+    if(cfg){
+      const amt = cfg.yieldPerHit;
+      f[cfg.key] = Math.min(cfg.cap, (f[cfg.key]||0)+amt);
+      f.mats = Math.min(f.maxMats!=null? f.maxMats:9999, f.mats+amt);
+      spawnSparks(res.x,res.y,cfg.hex,8);
+      if(f===player) floatTexts.push({x:res.x,y:res.y-16,txt:'+'+amt+' '+cfg.icon,t:0,color:cfg.hex});
+    }
+    damagePiece(piece, 90, res.x,res.y);
   }
 }
 
@@ -4075,13 +4207,34 @@ function nearestEnemyOf(self){
 function nearestActivePickupFor(self, maxRange){
   let best=null, bestD=maxRange;
   pickups.forEach(pk=>{
-    if(!pk.active) return;
+    if(!pk.active || pk.kind==='weapon') return; // weapon loot has its own bot-seek path
     const c = CONSUMABLES.find(cc=>cc.id===pk.type);
     if((self.inventory[pk.type]||0) >= c.maxStack) return;
     const d = Math.hypot(pk.x-self.x, pk.y-self.y);
     if(d<bestD){ bestD=d; best=pk; }
   });
   return best;
+}
+function nearestWeaponPickupFor(self, maxRange){
+  let best=null, bestD=maxRange;
+  pickups.forEach(pk=>{
+    if(!pk.active || pk.kind!=='weapon') return;
+    const d = Math.hypot(pk.x-self.x, pk.y-self.y);
+    if(d<bestD){ bestD=d; best=pk; }
+  });
+  return best;
+}
+function nearestResourceNodeFor(self, maxRange){
+  let best=null, bestD=maxRange;
+  solids.forEach(p=>{
+    if(!RESOURCE_NODE_CONFIG[p.type]) return;
+    const d = Math.hypot(p.cx*CELL+CELL/2-self.x, p.cy*CELL+CELL/2-self.y);
+    if(d<bestD){ bestD=d; best=p; }
+  });
+  return best;
+}
+function hasAnyWeapon(f){
+  return WEAPONS.some((w,i)=> f.clip[i]>0 || f.reserve[i]>0);
 }
 
 // How far outside the ranked zone this fighter currently is (negative = safely inside).
@@ -4104,6 +4257,10 @@ function botThink(self, dt){
   // outright, and overrides even an active fight once it's actually costing real hp.
   const outsideBy = isAnyRankedMatch() ? distanceOutsideZone(self) : -1;
   const zoneHurts = outsideBy>0 && rankedZone && rankedZone.dps>0;
+  // BR only: a bot with no weapon at all can't fight regardless of what else is going on —
+  // finding one (or, failing that, harvesting toward being able to build/survive) outranks
+  // engaging/wandering, exactly like zoneHurts outranks everything except itself.
+  const unarmed = isAnyRankedMatch() && !hasAnyWeapon(self);
 
   const target = nearestEnemyOf(self);
   self.aiTarget = target;
@@ -4111,12 +4268,47 @@ function botThink(self, dt){
     if(zoneHurts){
       self.aiState='zoneRush'; self._wantFire=false;
       self._moveDir = Math.atan2(rankedZone.cy-self.y, rankedZone.cx-self.x);
+    } else if(unarmed){
+      const wpk = nearestWeaponPickupFor(self, 2600);
+      if(wpk){
+        self.aiState='seekWeapon'; self._wantFire=false; self.aiHarvestTarget=null;
+        self._moveDir = Math.atan2(wpk.y-self.y, wpk.x-self.x);
+      } else {
+        const node = nearestResourceNodeFor(self, 900);
+        if(node){
+          self.aiState='harvest'; self._wantFire=false; self.aiHarvestTarget=node;
+          const nx=node.cx*CELL+CELL/2, ny=node.cy*CELL+CELL/2;
+          self._moveDir = Math.atan2(ny-self.y, nx-self.x);
+        } else {
+          self.aiState='wander'; self._wantFire=false;
+          if(time>=(self.aiNextWander||0)){ self._moveDir = Math.random()*Math.PI*2; self.aiNextWander = time+1200+Math.random()*1200; }
+        }
+      }
     } else {
       self.aiState='wander'; self._wantFire=false;
       const loot = nearestActivePickupFor(self, 1400);
-      if(loot){ self._moveDir = Math.atan2(loot.y-self.y, loot.x-self.x); }
-      else if(time>=(self.aiNextWander||0)){ self._moveDir = Math.random()*Math.PI*2; self.aiNextWander = time+1200+Math.random()*1200; }
+      if(loot){ self._moveDir = Math.atan2(loot.y-self.y, loot.x-self.x); self.aiHarvestTarget=null; }
+      else {
+        const node = isAnyRankedMatch() && self.mats<150 ? nearestResourceNodeFor(self, 700) : null;
+        if(node){
+          self.aiState='harvest'; self.aiHarvestTarget=node;
+          const nx=node.cx*CELL+CELL/2, ny=node.cy*CELL+CELL/2;
+          self._moveDir = Math.atan2(ny-self.y, nx-self.x);
+        } else {
+          self.aiHarvestTarget=null;
+          if(time>=(self.aiNextWander||0)){ self._moveDir = Math.random()*Math.PI*2; self.aiNextWander = time+1200+Math.random()*1200; }
+        }
+      }
     }
+    detectStuck(self);
+    return;
+  }
+
+  if(unarmed){
+    self.aiState='seekWeapon'; self._wantFire=false;
+    const wpk = nearestWeaponPickupFor(self, 2600);
+    if(wpk){ self._moveDir = Math.atan2(wpk.y-self.y, wpk.x-self.x); }
+    else { self._moveDir = Math.atan2(self.y-target.y, self.x-target.x); } // no gun in sight — just run
     detectStuck(self);
     return;
   }
@@ -4235,6 +4427,25 @@ function botAct(self, dt){
     if(self._wantFire && canFire(self) && Math.abs(da)<0.5){
       fireWeapon(self);
     }
+  } else if(self.aiState==='harvest' && self.aiHarvestTarget){
+    // Opportunistic pickaxe harvesting: face the node, close in, swing once in range —
+    // pickAt is already fully generic per-fighter, so this reuses it exactly as the
+    // player's own right-click action does, no separate bot-harvest logic needed.
+    const node = self.aiHarvestTarget;
+    const nx = node.cx*CELL+CELL/2, ny = node.cy*CELL+CELL/2;
+    const dist = Math.hypot(nx-self.x, ny-self.y);
+    const targetAngle = Math.atan2(ny-self.y, nx-self.x);
+    let da = targetAngle-self.angle;
+    while(da>Math.PI) da-=Math.PI*2; while(da<-Math.PI) da+=Math.PI*2;
+    self.angle += da*Math.min(1, 8*dt);
+    if(dist>70 && !self.usingItem && self._moveDir!=null){
+      const spd = self.speed*dt;
+      const [px,py] = resolveMovement(self, self.x+Math.cos(self._moveDir)*spd, self.y+Math.sin(self._moveDir)*spd);
+      self.x=px; self.y=py;
+    } else if(dist<=70 && Math.abs(da)<0.4){
+      pickAt(self);
+    }
+    finishReloadIfDue(self);
   } else if(!self.usingItem && self._moveDir!=null){
     const spd = self.speed*dt;
     const [nx,ny] = resolveMovement(self, self.x+Math.cos(self._moveDir)*spd, self.y+Math.sin(self._moveDir)*spd);
@@ -4382,6 +4593,9 @@ function updateRespawns(){
 }
 
 function matsRegen(dt){
+  // Battle Royale materials must be actively harvested with the pickaxe, not trickle in for
+  // free — every other mode (no zone forcing a decision) keeps the original passive regen.
+  if(isAnyRankedMatch()) return;
   activeFighters.forEach(f=>{
     if(f.mats<f.maxMats && f.mats<9000) f.mats = Math.min(f.maxMats, f.mats+9*dt);
   });
@@ -4439,6 +4653,7 @@ function drawGround(){
 
 function drawSolids(){
   solids.forEach(p=>{
+    if(RESOURCE_NODE_CONFIG[p.type]){ drawResourceNode(p); return; }
     const inset = p.half? CELL*0.28:0;
     const x=p.cx*CELL+inset, y=p.cy*CELL+inset, s=CELL-inset*2;
     ctx.fillStyle = shade(p.hex, 1);
@@ -4453,6 +4668,56 @@ function drawSolids(){
     }
   });
 }
+// Deliberately larger/bolder than the purely-decorative terrain props (generateTerrain's
+// tiny baked-in trees/rocks) so a harvestable node always reads as clearly distinct and
+// interactive — full-cell footprint, drawn fresh every frame (so it can visibly shrink
+// as it's chipped away), with a hp sliver identical in style to every other solid piece.
+function drawResourceNode(p){
+  const cx = p.cx*CELL+CELL/2, cy = p.cy*CELL+CELL/2;
+  const ratio = Math.max(0, p.hp/p.maxHp);
+  const s = CELL*0.46*(0.55+0.45*ratio); // visibly shrinks as it's depleted
+  ctx.save();
+  ctx.translate(cx,cy);
+  ctx.beginPath(); ctx.ellipse(0,s*0.5,s*1.05,s*0.4,0,0,Math.PI*2);
+  ctx.fillStyle='rgba(0,0,0,0.3)'; ctx.fill();
+  if(p.type==='tree'){
+    ctx.beginPath(); ctx.arc(0,0,s,0,Math.PI*2); ctx.fillStyle='#2f5c33'; ctx.fill();
+    ctx.beginPath(); ctx.arc(0,0,s*0.62,0,Math.PI*2); ctx.fillStyle='#3c7a41'; ctx.fill();
+    ctx.beginPath(); ctx.arc(0,0,s*0.32,0,Math.PI*2); ctx.fillStyle='#4d9a53'; ctx.fill();
+    ctx.beginPath(); ctx.arc(-s*0.22,-s*0.28,s*0.22,0,Math.PI*2); ctx.fillStyle='rgba(255,255,255,0.12)'; ctx.fill();
+  } else if(p.type==='rock'){
+    ctx.beginPath();
+    const bumps=7;
+    for(let i=0;i<bumps;i++){
+      const a=(i/bumps)*Math.PI*2, rr=s*(0.85+((i%2)?0.15:0));
+      const px=Math.cos(a)*rr, py=Math.sin(a)*rr*0.85;
+      i===0? ctx.moveTo(px,py): ctx.lineTo(px,py);
+    }
+    ctx.closePath(); ctx.fillStyle='#7d8797'; ctx.fill();
+    ctx.strokeStyle='rgba(0,0,0,0.35)'; ctx.lineWidth=2; ctx.stroke();
+    ctx.beginPath(); ctx.moveTo(-s*0.3,-s*0.2); ctx.lineTo(s*0.15,-s*0.45); ctx.lineTo(s*0.35,-s*0.1);
+    ctx.strokeStyle='rgba(255,255,255,0.15)'; ctx.lineWidth=2; ctx.stroke();
+  } else { // metalobj
+    ctx.fillStyle='#828e9c';
+    roundRect(-s*0.85,-s*0.7,s*1.7,s*1.4,5); ctx.fill();
+    ctx.strokeStyle='rgba(0,0,0,0.4)'; ctx.lineWidth=2; ctx.stroke();
+    ctx.strokeStyle='rgba(255,255,255,0.2)'; ctx.lineWidth=1.5;
+    ctx.beginPath(); ctx.moveTo(-s*0.6,-s*0.3); ctx.lineTo(s*0.6,-s*0.3); ctx.moveTo(-s*0.6,s*0.25); ctx.lineTo(s*0.6,s*0.25);
+    ctx.stroke();
+    ctx.fillStyle='#5b6674';
+    ctx.beginPath(); ctx.arc(-s*0.5,-s*0.5,s*0.14,0,Math.PI*2); ctx.fill();
+    ctx.beginPath(); ctx.arc(s*0.5,-s*0.5,s*0.14,0,Math.PI*2); ctx.fill();
+    ctx.beginPath(); ctx.arc(-s*0.5,s*0.5,s*0.14,0,Math.PI*2); ctx.fill();
+    ctx.beginPath(); ctx.arc(s*0.5,s*0.5,s*0.14,0,Math.PI*2); ctx.fill();
+  }
+  ctx.restore();
+  if(p.hp<p.maxHp){
+    const bw = CELL*0.7;
+    ctx.fillStyle='rgba(0,0,0,0.45)'; ctx.fillRect(cx-bw/2, cy-CELL*0.5-2, bw, 4);
+    ctx.fillStyle = ratio>0.5? '#8ee6b0': ratio>0.25? '#ffcf5c':'#ff5c74';
+    ctx.fillRect(cx-bw/2, cy-CELL*0.5-2, bw*ratio, 4);
+  }
+}
 function drawPickups(){
   const bob = Math.sin(time/300)*3;
   pickups.forEach(pk=>{
@@ -4461,10 +4726,20 @@ function drawPickups(){
     ctx.translate(pk.x, pk.y+bob);
     ctx.beginPath(); ctx.arc(0,10-bob,14,0,Math.PI*2);
     ctx.fillStyle='rgba(0,0,0,0.3)'; ctx.fill();
-    ctx.beginPath(); ctx.arc(0,0,17,0,Math.PI*2);
-    ctx.fillStyle='rgba(19,24,36,0.85)'; ctx.fill();
-    ctx.strokeStyle = pk.type==='shield'? '#39c7ff':'#6bffa0'; ctx.lineWidth=1.5; ctx.stroke();
-    if(pk.type==='shield') drawShieldIcon(0,0,18,'#39c7ff'); else drawMedkitIcon(0,0,18,'#6bffa0');
+    if(pk.kind==='weapon'){
+      const w = WEAPONS.find(ww=>ww.id===pk.type);
+      ctx.beginPath(); ctx.arc(0,0,17,0,Math.PI*2);
+      ctx.fillStyle='rgba(19,24,36,0.85)'; ctx.fill();
+      ctx.strokeStyle = w.color; ctx.lineWidth=2; ctx.stroke();
+      ctx.fillStyle = w.color; ctx.font='bold 15px Rajdhani, sans-serif';
+      ctx.textAlign='center'; ctx.textBaseline='middle';
+      ctx.fillText(w.key, 0, 1);
+    } else {
+      ctx.beginPath(); ctx.arc(0,0,17,0,Math.PI*2);
+      ctx.fillStyle='rgba(19,24,36,0.85)'; ctx.fill();
+      ctx.strokeStyle = pk.type==='shield'? '#39c7ff':'#6bffa0'; ctx.lineWidth=1.5; ctx.stroke();
+      if(pk.type==='shield') drawShieldIcon(0,0,18,'#39c7ff'); else drawMedkitIcon(0,0,18,'#6bffa0');
+    }
     ctx.restore();
   });
 }
@@ -5318,6 +5593,9 @@ function updateHUDStatic(){
   const mapTag = document.getElementById('mapNameTag');
   mapTag.classList.toggle('hidden', !MAP_NAMES[currentMapKey]);
   mapTag.textContent = MAP_NAMES[currentMapKey]||'';
+  // Per-type resource counters only mean anything in BR (elsewhere mats keep working
+  // exactly as before via the plain MAT. bar, with no per-type harvesting to show).
+  document.getElementById('resourceRow').classList.toggle('hidden', !ranked);
 }
 
 function updateHUD(){
@@ -5328,6 +5606,11 @@ function updateHUD(){
   document.getElementById('shieldRow').classList.toggle('empty', player.shield<=0);
   document.getElementById('matsFill').style.width = Math.min(100,(player.mats/player.maxMats*100))+'%';
   document.getElementById('matsNum').textContent = Math.round(Math.min(player.mats,player.maxMats));
+  if(isAnyRankedMatch()){
+    document.getElementById('resWoodNum').textContent = Math.round(player.wood||0);
+    document.getElementById('resStoneNum').textContent = Math.round(player.stone||0);
+    document.getElementById('resMetalNum').textContent = Math.round(player.metal||0);
+  }
   if(isAnyRankedMatch() && rankedMatch){
     document.getElementById('rkPoints').textContent = Math.round(profile.ranked.points);
     document.getElementById('rkKills').textContent = player.kills;
