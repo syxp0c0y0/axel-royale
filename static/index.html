@@ -95,6 +95,13 @@ html,body{
   color:var(--muted); background:rgba(19,24,36,.7); border:1px solid var(--line); border-radius:20px;
   padding:4px 14px; pointer-events:none;
 }
+#stormPrepBanner{
+  position:fixed; top:54px; left:50%; transform:translateX(-50%); z-index:6;
+  font-family:'Rajdhani'; font-weight:800; font-size:18px; letter-spacing:.05em; text-transform:uppercase;
+  color:#ffd166; background:rgba(19,24,36,.88); border:1px solid #ffd166; border-radius:10px;
+  padding:8px 22px; pointer-events:none; text-align:center; box-shadow:0 0 18px rgba(255,209,102,.35);
+}
+#stormPrepBanner .n{font-variant-numeric:tabular-nums; color:#fff; font-size:22px;}
 #minimapWrap{
   position:fixed; top:16px; right:200px; z-index:5; pointer-events:none;
   background:rgba(10,13,20,.78); border:1px solid var(--line); border-radius:10px; padding:4px;
@@ -730,6 +737,7 @@ h1.title{
   <div id="spectateHintRanked" class="hidden">Tab: cambiar de jugador</div>
 </div>
 <div id="mapNameTag" class="hidden"></div>
+<div id="stormPrepBanner" class="hidden">PREPARACIÓN — LA TORMENTA COMIENZA EN <span class="n" id="stormPrepNum">60</span>S</div>
 <div id="minimapWrap"><canvas id="minimapCanvas"></canvas></div>
 
 <div id="actionBar"></div>
@@ -742,7 +750,8 @@ h1.title{
   <div><b>Clic der.</b> picar / demoler</div>
   <div><b>1–5</b> armas · <b>rueda</b> cambia arma</div>
   <div><b>Q</b> construir muro · <b>6 7</b> mini escudo / botiquín</div>
-  <div><b>Espacio</b> recargar · <b>Esc</b> pausa</div>
+  <div><b>G</b> sacar/guardar el pico · <b>Espacio</b> recargar</div>
+  <div><b>Clic medio / V</b> marcar (ping) · <b>Esc</b> pausa</div>
   <div style="margin-top:8px">El muro bloquea balas y movimiento — cuesta materiales y tiene vida propia.</div>
 </div>
 
@@ -1815,6 +1824,7 @@ function makeFighter(isBot){
     mats: isBot? 240:200, maxMats:300,
     wood:0, stone:0, metal:0, // per-type resource counters (BR only) — f.mats stays the shared pool everything else already reads
     weaponIdx:0, buildIdx:-1, // -1 = weapon mode
+    usingPickaxe:false, // G toggles this — true means the pickaxe is the active hand tool
     clip: WEAPONS.map(w=>w.clip),
     reserve: WEAPONS.map(w=>Math.floor(w.reserveMax*0.6)),
     reloading:false, reloadEnd:0,
@@ -2638,13 +2648,20 @@ window.addEventListener('keydown', e=>{
   if(!running || paused) return;
   if(k==='tab' && isSpectating){ e.preventDefault(); cycleSpectateFollow(); return; }
   if(isSpectating) return; // everything below is real input — a spectator never controls a fighter
-  if(k>='1'&&k<='5'){ player.buildIdx=-1; player.consumableIdx=-1; player.weaponIdx = +k-1; }
+  if(k>='1'&&k<='5'){ player.buildIdx=-1; player.consumableIdx=-1; player.usingPickaxe=false; player.weaponIdx = +k-1; }
   const bIdx = BUILDS.findIndex(b=>b.key===k);
-  if(bIdx>=0){ player.buildIdx = bIdx; player.consumableIdx=-1; }
+  if(bIdx>=0){ player.buildIdx = bIdx; player.consumableIdx=-1; player.usingPickaxe=false; }
   const cIdx = CONSUMABLES.findIndex(c=>c.key===k);
-  if(cIdx>=0){ player.consumableIdx = cIdx; player.buildIdx=-1; }
+  if(cIdx>=0){ player.consumableIdx = cIdx; player.buildIdx=-1; player.usingPickaxe=false; }
   if(k===' '){ e.preventDefault(); tryReload(player); }
-  if(k==='g' && player.alive) placePing(mouse.x+camX, mouse.y+camY); // keyboard fallback for the middle-click ping
+  // G: swap to/from the pickaxe as the active hand tool — press again to go back to
+  // whatever weapon slot was selected before (weaponIdx itself never changes here, so
+  // it's automatically "still there" once usingPickaxe flips back off).
+  if(k==='g' && player.alive){
+    player.usingPickaxe = !player.usingPickaxe;
+    if(player.usingPickaxe){ player.buildIdx=-1; player.consumableIdx=-1; }
+  }
+  if(k==='v' && player.alive) placePing(mouse.x+camX, mouse.y+camY); // keyboard fallback for the middle-click ping
   if(k==='escape'){ togglePause(); }
 });
 window.addEventListener('keyup', e=>{ keys[e.key.toLowerCase()]=false; });
@@ -2666,6 +2683,7 @@ canvas.addEventListener('contextmenu', e=>e.preventDefault());
 canvas.addEventListener('wheel', e=>{
   if(!running||paused) return;
   if(player.buildIdx>=0 || player.consumableIdx>=0){ return; }
+  player.usingPickaxe = false; // scrolling to a weapon puts the pickaxe away
   const dir = e.deltaY>0?1:-1;
   player.weaponIdx = (player.weaponIdx+dir+WEAPONS.length)%WEAPONS.length;
 },{passive:true});
@@ -3575,6 +3593,7 @@ function handleGameMessage(data){
       from.hp = data.hp; from.alive = data.alive; from.deaths = data.deaths; from.kills = data.kills||0;
       from.shield = data.shield||0;
       from.weaponIdx = data.weaponIdx; from.buildIdx = data.buildIdx; from.reloading = data.reloading;
+      from.usingPickaxe = !!data.usingPickaxe;
       from.channelProgress = data.channelProgress!=null? data.channelProgress : null;
       from.channelType = data.channelType||null;
       if(data.name) from.name = data.name;
@@ -4066,22 +4085,23 @@ function applyRankedMatchEnd(placement){
 // instead of ~100 seconds; early damage is gentle (2 dps won't kill fast) and only escalates
 // hard in the last couple of phases, forcing an eventual endgame without punishing early
 // exploration.
-// Timings scaled ~1.4x from the previous table — the map is ~1.8x longer edge-to-edge now
-// (COLS/ROWS grew 50/34 -> 90/58), so relocating between zone shrinks takes real travel
-// time; dps per phase is untouched (that's about how punishing being caught outside is,
-// not about how far you have to walk).
+// Exactly STORM_PREP_MS of stable, damage-free prep before the very first shrink — enough
+// time to loot/gather/fight without the storm forcing anything yet. Every checkpoint after
+// that keeps the same phase durations/dps the map-size rebalance already tuned, just
+// starting 70s sooner so the very first shrink still lands at STORM_PREP_MS exactly.
+const STORM_PREP_MS = 60000;
 const ZONE_PHASES = [
   {t:0,      frac:1.00, dps:0},
-  {t:130000, frac:1.00, dps:0},
-  {t:210000, frac:0.65, dps:2},
-  {t:295000, frac:0.65, dps:2},
-  {t:380000, frac:0.40, dps:4},
-  {t:460000, frac:0.40, dps:4},
+  {t:STORM_PREP_MS, frac:1.00, dps:0},
+  {t:140000, frac:0.65, dps:2},
+  {t:225000, frac:0.65, dps:2},
+  {t:310000, frac:0.40, dps:4},
+  {t:390000, frac:0.40, dps:4},
+  {t:475000, frac:0.22, dps:7},
   {t:545000, frac:0.22, dps:7},
-  {t:615000, frac:0.22, dps:7},
-  {t:685000, frac:0.08, dps:11},
-  {t:740000, frac:0.08, dps:11},
-  {t:800000, frac:0.0,  dps:18},
+  {t:615000, frac:0.08, dps:11},
+  {t:670000, frac:0.08, dps:11},
+  {t:730000, frac:0.0,  dps:18},
 ];
 let rankedZone = null; // {cx, cy, baseR, radius, dps, nextT, shrinking}
 function initRankedZone(){
@@ -4677,6 +4697,7 @@ function sendMyStateIfDue(){
   lastStateSendTime = time;
   sendGame({k:'s', x:player.x, y:player.y, angle:player.angle, hp:player.hp, alive:player.alive,
              deaths:player.deaths, kills:player.kills, weaponIdx:player.weaponIdx, buildIdx:player.buildIdx, reloading:player.reloading,
+             usingPickaxe:player.usingPickaxe,
              shield:player.shield, channelProgress:player.channelProgress,
              channelType: player.usingItem? player.usingItem.type : null, name:player.name,
              tier: rankTierFor(profile.ranked.points).id, rankPoints: profile.ranked.points});
@@ -4696,6 +4717,7 @@ function sendBotStatesIfDue(){
     if(netId<0) return;
     sendGameAs(netId, {k:'s', x:f.x, y:f.y, angle:f.angle, hp:f.hp, alive:f.alive,
                deaths:f.deaths, kills:f.kills, weaponIdx:f.weaponIdx, buildIdx:f.buildIdx, reloading:f.reloading,
+               usingPickaxe:f.usingPickaxe,
                shield:f.shield, channelProgress:f.channelProgress,
                channelType: f.usingItem? f.usingItem.type : null, name:f.name});
   });
@@ -4727,7 +4749,10 @@ function updatePlayer(dt){
     // no firing/building/reloading while a consumable is selected.
   } else if(mouse.rdown){ pickAt(player); }
   else if(mouse.down){
-    if(player.buildIdx>=0){ placeBuild(player); }
+    // Pickaxe equipped (G) takes over the main action button entirely — no firing/building
+    // while it's out, exactly like a real weapon swap.
+    if(player.usingPickaxe){ pickAt(player); }
+    else if(player.buildIdx>=0){ placeBuild(player); }
     else if(canFire(player)){ fireWeapon(player); }
     else if(currentWeapon(player).clip===0 || player.clip[player.weaponIdx]<=0){ tryReload(player); }
   }
@@ -5678,10 +5703,11 @@ function drawFighter(f){
   ctx.fill();
   ctx.shadowBlur = 0;
   ctx.strokeStyle = 'rgba(255,255,255,0.55)'; ctx.lineWidth=2; ctx.stroke();
-  // A fighter with no ammo in any weapon slot (BR only — every other mode always has
-  // ammo) hasn't found a gun yet, so what's actually in their hand is the pickaxe.
-  if(hasAnyWeapon(f)) weaponSkinPaint(f.weaponSkin, PLAYER_R-4, -4, 20, 8);
-  else pickaxePaint(f.pickaxe, PLAYER_R-6, -2);
+  // Shows the pickaxe instead of the gun whenever it's the explicitly-equipped active tool
+  // (G) OR the fighter has no ammo in any weapon slot at all (BR only — every other mode
+  // always has ammo, so that half never triggers there).
+  if(f.usingPickaxe || !hasAnyWeapon(f)) pickaxePaint(f.pickaxe, PLAYER_R-6, -2);
+  else weaponSkinPaint(f.weaponSkin, PLAYER_R-4, -4, 20, 8);
   ctx.restore();
 
   if(f.hat && f.hat!=='hat_none'){
@@ -5858,6 +5884,9 @@ function updateHUDStatic(){
   // Per-type resource counters only mean anything in BR (elsewhere mats keep working
   // exactly as before via the plain MAT. bar, with no per-type harvesting to show).
   document.getElementById('resourceRow').classList.toggle('hidden', !ranked);
+  // Reset here too (not just in updateHUD's per-frame ranked branch) so the prep banner
+  // never lingers on screen if a non-ranked match starts right after a ranked one ended.
+  if(!ranked) document.getElementById('stormPrepBanner').classList.add('hidden');
 }
 
 function updateHUD(){
@@ -5887,6 +5916,16 @@ function updateHUD(){
         ? 'ZONA CERRÁNDOSE — '+secsLeft+'s'
         : (rankedZone.nextT>time? 'ZONA SE CIERRA EN '+secsLeft+'s' : 'ZONA CERRADA');
     }
+    // A big, hard-to-miss countdown for the initial no-damage prep window — the small
+    // zoneStatusLine text above already says the same thing, but this is the "clara y
+    // visible" version specifically for the first STORM_PREP_MS of every BR match.
+    const prepBanner = document.getElementById('stormPrepBanner');
+    if(time < STORM_PREP_MS){
+      prepBanner.classList.remove('hidden');
+      document.getElementById('stormPrepNum').textContent = Math.max(0, Math.ceil((STORM_PREP_MS-time)/1000));
+    } else {
+      prepBanner.classList.add('hidden');
+    }
   } else if(isTeamMode()){
     document.getElementById('tagMe').textContent = 'TU EQUIPO '+teamKills(player.team);
     const enemyTeam = activeFighters.map(f=>f.team).find(t=>t!==player.team);
@@ -5904,7 +5943,7 @@ function updateHUD(){
 
   actionBar.querySelectorAll('.slot.weapon').forEach(el=>{
     const i = +el.dataset.wi;
-    el.classList.toggle('active', player.buildIdx<0 && player.consumableIdx<0 && player.weaponIdx===i);
+    el.classList.toggle('active', !player.usingPickaxe && player.buildIdx<0 && player.consumableIdx<0 && player.weaponIdx===i);
     const sub = el.querySelector('.sub');
     sub.textContent = player.reloading && player.weaponIdx===i ? '...' : (player.clip[i]+'/'+player.reserve[i]);
     el.classList.toggle('empty', player.clip[i]===0 && !player.reloading);
