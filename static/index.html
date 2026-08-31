@@ -877,6 +877,8 @@ h1.title{
       <div class="cosmetic-grid" id="wskinGrid"></div>
       <div class="cust-section-label">HALO DE RANGO</div>
       <div class="cosmetic-grid" id="haloGrid"></div>
+      <div class="cust-section-label">PICO</div>
+      <div class="cosmetic-grid" id="pickaxeGrid"></div>
     </div>
 
     <div id="shopView" class="hidden">
@@ -1399,9 +1401,41 @@ const PASS_WEAPON_SKINS = [
   {id:'wskin_dragon', type:'wskin', name:'Dragón',           rarity:'legendary', price:0, passReward:true},
   {id:'wskin_holo',   type:'wskin', name:'Holográfica',      rarity:'legendary', price:0, passReward:true},
 ];
-const COSMETICS = COLORS.concat(HATS).concat(WEAPON_SKINS).concat(PASS_COLORS).concat(PASS_HATS).concat(PASS_WEAPON_SKINS).concat(RANK_REWARD_COLORS).concat(HALOS);
+// Pickaxes — cosmetic only, exactly like weapon skins: what a fighter starts every Battle
+// Royale match with (see stripLoadoutForBR/pickAt) and swings visually is purely a reskin,
+// never a change to harvest damage/yield/range (nothing here is read by pickAt/RESOURCE_
+// NODE_CONFIG). One equipped pickaxe applies whenever the fighter has no weapon in hand —
+// see hasAnyWeapon()/drawFighter — so different players can visibly carry different picks.
+const PICKAXES = [
+  {id:'pickaxe_default',  type:'pickaxe', name:'Pico Estándar',  rarity:'common',   price:0, default:true},
+  {id:'pickaxe_iron',     type:'pickaxe', name:'Pico de Hierro', rarity:'common',   price:100},
+  {id:'pickaxe_birch',    type:'pickaxe', name:'Pico de Abedul', rarity:'uncommon', price:220},
+  {id:'pickaxe_obsidian', type:'pickaxe', name:'Pico Obsidiana', rarity:'rare',     price:380},
+  {id:'pickaxe_gilded',   type:'pickaxe', name:'Pico Dorado',    rarity:'epic',     price:620},
+  {id:'pickaxe_void',     type:'pickaxe', name:'Pico del Vacío', rarity:'legendary',price:900},
+];
+// Battle Pass exclusive pickaxes — never sold in the shop, only unlocked by reaching (and
+// claiming) their assigned pass level. Spread across both lanes at levels that currently
+// only pay coins (see BATTLE_PASS_FREE_MILESTONES/BATTLE_PASS_PREMIUM_MILESTONES below) —
+// every existing hat/color/weapon-skin milestone stays exactly where it already was.
+const PASS_PICKAXES = [
+  {id:'pickaxe_camo',    type:'pickaxe', name:'Pico Camuflaje',  rarity:'common',    price:0, passReward:true},
+  {id:'pickaxe_slate',   type:'pickaxe', name:'Pico Pizarra',    rarity:'common',    price:0, passReward:true},
+  {id:'pickaxe_rust',    type:'pickaxe', name:'Pico Oxidado',    rarity:'uncommon',  price:0, passReward:true},
+  {id:'pickaxe_copper',  type:'pickaxe', name:'Pico de Cobre',   rarity:'uncommon',  price:0, passReward:true},
+  {id:'pickaxe_toxic',   type:'pickaxe', name:'Pico Tóxico',     rarity:'uncommon',  price:0, passReward:true},
+  {id:'pickaxe_jade',    type:'pickaxe', name:'Pico Jade',       rarity:'rare',      price:0, passReward:true},
+  {id:'pickaxe_crystal', type:'pickaxe', name:'Pico de Cristal', rarity:'rare',      price:0, passReward:true},
+  {id:'pickaxe_magma',   type:'pickaxe', name:'Pico de Magma',   rarity:'rare',      price:0, passReward:true},
+  {id:'pickaxe_ember',   type:'pickaxe', name:'Pico Ascua',      rarity:'epic',      price:0, passReward:true},
+  {id:'pickaxe_neon',    type:'pickaxe', name:'Pico Neón',       rarity:'epic',      price:0, passReward:true},
+  {id:'pickaxe_shadow',  type:'pickaxe', name:'Pico Sombra',     rarity:'epic',      price:0, passReward:true},
+  {id:'pickaxe_aurora',  type:'pickaxe', name:'Pico Aurora',     rarity:'legendary', price:0, passReward:true},
+  {id:'pickaxe_dragon',  type:'pickaxe', name:'Pico Dragón',     rarity:'legendary', price:0, passReward:true},
+];
+const COSMETICS = COLORS.concat(HATS).concat(WEAPON_SKINS).concat(PASS_COLORS).concat(PASS_HATS).concat(PASS_WEAPON_SKINS).concat(RANK_REWARD_COLORS).concat(HALOS).concat(PICKAXES).concat(PASS_PICKAXES);
 // Which profile field each cosmetic slot equips into — shared by Customize and the Shop.
-const EQUIP_FIELD = {color:'equippedColor', hat:'equippedHat', halo:'equippedHalo', wskin:'equippedWeaponSkin'};
+const EQUIP_FIELD = {color:'equippedColor', hat:'equippedHat', halo:'equippedHalo', wskin:'equippedWeaponSkin', pickaxe:'equippedPickaxe'};
 
 const PROFILE_KEY = 'axelsRoyaleProfile_v1';
 const MAX_NAME_LEN = 16;
@@ -1421,6 +1455,7 @@ function defaultProfile(){
     coins:0, name:'Jugador'+Math.floor(1000+Math.random()*9000),
     owned: COSMETICS.filter(c=>c.default).map(c=>c.id),
     equippedColor:'color_blue', equippedHat:'hat_none', equippedHalo:'halo_none', equippedWeaponSkin:'wskin_default',
+    equippedPickaxe:'pickaxe_default',
     stats:{kills:0, wins:0, matchesPlayed:0, damageDealt:0},
     ranked:{points:0, wins:0, kills:0, matches:0, bestPlacement:null},
     challenges:{daily:null, weekly:null},
@@ -1446,6 +1481,7 @@ function loadProfile(){
       equippedHat: p.equippedHat || d.equippedHat,
       equippedHalo: p.equippedHalo || d.equippedHalo,
       equippedWeaponSkin: p.equippedWeaponSkin || d.equippedWeaponSkin,
+      equippedPickaxe: p.equippedPickaxe || d.equippedPickaxe,
       stats: Object.assign({kills:0,wins:0,matchesPlayed:0,damageDealt:0}, p.stats||{}),
       ranked: Object.assign({points:0,wins:0,kills:0,matches:0,bestPlacement:null}, p.ranked||{}),
       // Daily/weekly sets themselves are validated/regenerated by ensureChallenges() right
@@ -1634,14 +1670,17 @@ function xpForLevel(n){ return 300 + (n-1)*40; }
 // level-100 capstone (a weapon-body color for the free track, the Cresta de Dragón hat —
 // the single most visually striking piece here — for Premium).
 const BATTLE_PASS_FREE_MILESTONES = {
-  10:'hat_visor', 20:'color_sand', 30:'hat_bucket', 40:'hat_bandana', 50:'hat_headband',
-  60:'color_teal', 70:'hat_pirate', 80:'color_orange', 90:'wskin_camo', 100:'color_fuchsia',
+  5:'pickaxe_camo', 10:'hat_visor', 20:'color_sand', 25:'pickaxe_rust', 30:'hat_bucket',
+  40:'hat_bandana', 45:'pickaxe_jade', 50:'hat_headband',
+  60:'color_teal', 65:'pickaxe_ember', 70:'hat_pirate', 80:'color_orange', 85:'pickaxe_aurora',
+  90:'wskin_camo', 100:'color_fuchsia',
 };
 const BATTLE_PASS_PREMIUM_MILESTONES = {
-  5:'hat_headphones', 10:'color_lime', 15:'color_mint', 20:'hat_ninja', 25:'hat_viking',
-  30:'hat_astronaut', 35:'hat_samurai', 40:'color_icecyan', 45:'color_magenta', 50:'wskin_toxic',
-  55:'hat_wizard', 60:'hat_mohawk', 65:'hat_robot', 70:'color_midnight', 75:'wskin_carbon',
-  80:'wskin_neon', 85:'hat_phoenix', 90:'wskin_dragon', 95:'wskin_holo', 100:'hat_dragon',
+  4:'pickaxe_slate', 5:'hat_headphones', 10:'color_lime', 15:'color_mint', 16:'pickaxe_copper',
+  20:'hat_ninja', 25:'hat_viking', 28:'pickaxe_toxic',
+  30:'hat_astronaut', 35:'hat_samurai', 40:'color_icecyan', 42:'pickaxe_crystal', 45:'color_magenta', 50:'wskin_toxic',
+  54:'pickaxe_magma', 55:'hat_wizard', 60:'hat_mohawk', 65:'hat_robot', 66:'pickaxe_neon', 70:'color_midnight', 75:'wskin_carbon',
+  78:'pickaxe_shadow', 80:'wskin_neon', 85:'hat_phoenix', 90:'wskin_dragon', 92:'pickaxe_dragon', 95:'wskin_holo', 100:'hat_dragon',
 };
 // Premium always pays a little more than free at the same level, on top of its much denser
 // cosmetic milestones (every 5 levels vs. every 10) — the coin curve alone is a small part
@@ -1765,7 +1804,7 @@ function cellKey(cx,cy){ return cx+','+cy; }
 
 function makeFighter(isBot){
   return {
-    isBot, team:0, color:null, colorId:null, hat:null, halo:null, weaponSkin:null, rankTierId:null, rankPoints:null, spawnPos:null,
+    isBot, team:0, color:null, colorId:null, hat:null, halo:null, weaponSkin:null, pickaxe:null, rankTierId:null, rankPoints:null, spawnPos:null,
     x:0, y:0, angle:0, hp:100, maxHp:100, alive:true,
     shield:0, maxShield:50,
     inventory:{shield:0, medkit:0}, consumableIdx:-1, usingItem:null, channelProgress:null,
@@ -1827,6 +1866,7 @@ function applyEquippedCosmetics(f){
   f.hat = profile.equippedHat;
   f.halo = profile.equippedHalo;
   f.weaponSkin = profile.equippedWeaponSkin;
+  f.pickaxe = profile.equippedPickaxe;
   f.name = displayName(profile.name);
 }
 
@@ -2142,10 +2182,49 @@ const MAP_LAYOUTS = {
     [12,Math.floor(ROWS/2)-1],[12,Math.floor(ROWS/2)],
     [COLS-13,Math.floor(ROWS/2)-1],[COLS-13,Math.floor(ROWS/2)],
   ],
+  // Lago: a big central lake (kept clear of walls here — see MAP_AVOID_ZONES/generateTerrain
+  // for the actual water) ringed by four small house clusters, with short dock stubs poking
+  // out from the north/south shore toward the water.
+  lago: [
+    ...rectRingCells(12,8,3,2,'ns'), ...rectRingCells(38,8,3,2,'ns'),
+    ...rectRingCells(12,26,3,2,'ns'), ...rectRingCells(38,26,3,2,'ns'),
+    [22,11],[22,12],[22,13], [28,11],[28,12],[28,13],
+    [22,22],[22,23],[22,24], [28,22],[28,23],[28,24],
+    [17,17],[33,17],[25,9],[25,25],
+  ],
+  // Piscina/casa: one large multi-room house (hollow ring + interior partitions) with a
+  // pool courtyard (kept clear here — see MAP_AVOID_ZONES/generateTerrain) framed by
+  // poolside furniture, patio furniture along the house's outer walls.
+  piscina: [
+    ...rectRingCells(16,17,8,6,'ns'),
+    [16,13],[16,14],[16,15], [10,17],[11,17],[12,17], [20,20],[20,21],[20,22],
+    [26,12],[27,12],[26,22],[27,22],
+    [30,14],[34,14],[30,20],[34,20],
+  ],
+  // Casa millonaria: a sprawling multi-room mansion (hollow ring + wing partitions), a
+  // small separate garage structure, a pool/terrace to the east (kept clear here — see
+  // MAP_AVOID_ZONES/generateTerrain) framed by terrace furniture, garden hedges as cover.
+  mansion: [
+    ...rectRingCells(30,17,10,7,'ns'),
+    [30,11],[30,12],[30,13],[30,14], [24,17],[25,17], [35,17],[36,17], [30,20],[30,21],[30,22],[30,23],
+    ...rectRingCells(14,26,3,2,'ns'),
+    [10,12],[11,12],[10,22],[11,22], [16,8],[17,8],[16,26],[17,26],
+    [42,15],[46,15],[42,19],[46,19],
+  ],
 };
 const MAP_NAMES = {
   clasico:'Clásico', cruce:'Cruce', islas:'Islas',
   fortaleza:'Fortaleza', laberinto:'Laberinto', centro:'Centro',
+  lago:'Lago', piscina:'Piscina', mansion:'Mansión',
+};
+// Per-map "keep clear" zones (world-px center + radius) — used both by generateTerrain (so
+// the deliberate lake/pool visual actually lands here) and by scatterResourceNodes/
+// scatterWeaponLoot (so nothing spawns floating in the water). Maps not listed here have
+// no special zone — resource/loot scatter covers their whole footprint as before.
+const MAP_AVOID_ZONES = {
+  lago:    {cx:25*CELL, cy:17*CELL, r:6.2*CELL},
+  piscina: {cx:32*CELL, cy:17*CELL, r:3.2*CELL},
+  mansion: {cx:44*CELL, cy:17*CELL, r:2.6*CELL},
 };
 let currentMapKey = 'clasico';
 // Avoid the same layout landing twice in a row when others are available — a light
@@ -2194,6 +2273,10 @@ function placeResourceNode(cx,cy,type){
 }
 // Scatters a balanced mix of all three resource types across the whole map — called for
 // EVERY layout (old and new alike) so no map ever ends up with only one resource type.
+function insideMapAvoidZone(wx,wy){
+  const z = MAP_AVOID_ZONES[currentMapKey];
+  return !!z && Math.hypot(wx-z.cx, wy-z.cy) < z.r;
+}
 function scatterResourceNodes(count){
   const types = ['tree','tree','rock','rock','metalobj']; // trees/rocks a bit more common than metal props
   let placed = 0, attempts = 0;
@@ -2201,6 +2284,7 @@ function scatterResourceNodes(count){
     attempts++;
     const cx = 2+Math.floor(matchRng()*(COLS-4));
     const cy = 2+Math.floor(matchRng()*(ROWS-4));
+    if(insideMapAvoidZone(cx*CELL+CELL/2, cy*CELL+CELL/2)) continue; // keep the lake/pool clear
     const type = types[Math.floor(matchRng()*types.length)];
     if(placeResourceNode(cx,cy,type)) placed++;
   }
@@ -2310,7 +2394,19 @@ function generateTerrain(){
     drawBlob(tctx, 200+matchRng()*(WORLD_W-400), 200+matchRng()*(WORLD_H-400), 130+matchRng()*110, '#4a3a2a', '#3a2d20');
   }
   drawBlob(tctx, 200+matchRng()*(WORLD_W-400), 200+matchRng()*(WORLD_H-400), 140+matchRng()*90, '#5c5232', '#493f26');
-  if(matchRng()<0.85){
+  if(currentMapKey==='lago'){
+    // The map's namesake: a real, large central lake — deliberately centered on the exact
+    // zone scatterResourceNodes/scatterWeaponLoot already keep clear, so the water and the
+    // "nothing spawns here" area always agree with each other.
+    const z = MAP_AVOID_ZONES.lago;
+    drawBlob(tctx, z.cx, z.cy, z.r*1.08, '#2a5a3a', null);
+    drawBlob(tctx, z.cx, z.cy, z.r*0.82, '#1f4a5c', '#123244');
+    drawBlob(tctx, z.cx, z.cy, z.r*0.52, '#245e78', null);
+  } else if(currentMapKey==='piscina' || currentMapKey==='mansion'){
+    const z = MAP_AVOID_ZONES[currentMapKey];
+    drawBlob(tctx, z.cx, z.cy, z.r*1.15, '#274a52', null); // pool deck
+    drawBlob(tctx, z.cx, z.cy, z.r*0.85, '#1f6a8c', '#123244'); // pool water
+  } else if(matchRng()<0.85){
     const wx=200+matchRng()*(WORLD_W-400), wy=200+matchRng()*(WORLD_H-400), wr=90+matchRng()*60;
     drawBlob(tctx, wx, wy, wr+18, '#3a4a2f', null);
     drawBlob(tctx, wx, wy, wr, '#1f4a5c', '#173a48');
@@ -2372,6 +2468,7 @@ function scatterWeaponLoot(count){
     const cx = 2+Math.floor(matchRng()*(COLS-4)), cy = 2+Math.floor(matchRng()*(ROWS-4));
     if(solids.has(cellKey(cx,cy))) continue;
     const x = cx*CELL+CELL/2, y = cy*CELL+CELL/2;
+    if(insideMapAvoidZone(x,y)) continue; // keep weapon loot out of the lake/pool
     if(pickups.some(p=>Math.abs(p.x-x)<CELL*0.7 && Math.abs(p.y-y)<CELL*0.7)) continue;
     const w = pickWeightedWeapon();
     pickups.push({id:'wpk'+placed, x, y, kind:'weapon', type:w.id, amount:1, active:true, respawnAt:0});
@@ -2656,6 +2753,9 @@ function cosmeticSwatchHTML(c){
   if(c.type==='wskin'){
     return `<div class="swatch" style="background:var(--surface2); display:flex; align-items:center; justify-content:center;">${weaponSkinSwatchSvg(c.id)}</div>`;
   }
+  if(c.type==='pickaxe'){
+    return `<div class="swatch" style="background:var(--surface2); display:flex; align-items:center; justify-content:center;">${pickaxeSwatchSvg(c.id)}</div>`;
+  }
   return `<div class="swatch" style="background:var(--surface2); display:flex; align-items:center; justify-content:center;">${hatSwatchSvg(c.shape, RARITY_COLORS[c.rarity])}</div>`;
 }
 // Small "weapon barrel" preview icon for menu cards — the same silhouette every skin card
@@ -2739,6 +2839,7 @@ function renderCustomizeView(){
   renderCosmeticGrid(document.getElementById('hatGrid'), COSMETICS.filter(c=>c.type==='hat'));
   renderCosmeticGrid(document.getElementById('wskinGrid'), COSMETICS.filter(c=>c.type==='wskin'));
   renderCosmeticGrid(document.getElementById('haloGrid'), COSMETICS.filter(c=>c.type==='halo'));
+  renderCosmeticGrid(document.getElementById('pickaxeGrid'), COSMETICS.filter(c=>c.type==='pickaxe'));
   drawPreviewCanvas(document.getElementById('custPreview'));
 }
 
@@ -5403,6 +5504,64 @@ function weaponSkinPaint(skinId, x, y, w, h){
     ctx.fillStyle='#1a1e28'; ctx.fillRect(x,y,w,h); // wskin_default and any unknown id
   }
 }
+
+// Pickaxe cosmetics: distinct handle/head colors per id (with a glow on the higher
+// rarities, and an animated hue-cycle on the two "holo" legendaries), painted as a real
+// pickaxe silhouette — deliberately not reusing the gun rectangle, so it reads unmistakably
+// as "no weapon yet, just the pickaxe" whenever a BR fighter has no ammo in any slot.
+const PICKAXE_VISUALS = {
+  pickaxe_default:  {handle:'#6b4a2f', head:'#8a94a3'},
+  pickaxe_iron:     {handle:'#5a5a5a', head:'#b8bec9'},
+  pickaxe_birch:    {handle:'#e8d9b5', head:'#5c6773'},
+  pickaxe_obsidian: {handle:'#1a1a22', head:'#3d2f52', glow:'#8b5cf6'},
+  pickaxe_gilded:   {handle:'#8a6d1a', head:'#ffd166', glow:'#ffe9a8'},
+  pickaxe_void:     {handle:'#0a0a12', head:'#1a1a2e', glow:'#ff2fb0', holo:true},
+  pickaxe_camo:     {handle:'#3a4a2c', head:'#5c6b3a'},
+  pickaxe_slate:    {handle:'#3a3f4a', head:'#6b7280'},
+  pickaxe_rust:     {handle:'#6b3a1f', head:'#b5502a'},
+  pickaxe_copper:   {handle:'#7a4a2a', head:'#c17a4a'},
+  pickaxe_toxic:    {handle:'#4a5c00', head:'#aeff00', glow:'#aeff00'},
+  pickaxe_jade:     {handle:'#0d3a2a', head:'#1f7a5c'},
+  pickaxe_crystal:  {handle:'#1a2f4a', head:'#4da3ff', glow:'#7fc7ff'},
+  pickaxe_magma:    {handle:'#3a0f0a', head:'#ff4500', glow:'#ff8a3d'},
+  pickaxe_ember:    {handle:'#5c1a0f', head:'#ff6a2e', glow:'#ff8a3d'},
+  pickaxe_neon:     {handle:'#003a42', head:'#00e5ff', glow:'#00e5ff'},
+  pickaxe_shadow:   {handle:'#0a0a0f', head:'#3a2f52', glow:'#c98bff'},
+  pickaxe_aurora:   {handle:'#0d2540', head:'#4fd1c5', glow:'#7fe8d1', holo:true},
+  pickaxe_dragon:   {handle:'#5c0f0f', head:'#ff8a3d', glow:'#ffcf5c', holo:true},
+};
+// x,y is the grip point in drawFighter's already-translated+rotated space (same convention
+// weaponSkinPaint uses) — the handle runs forward-and-out from there, head at the tip.
+function pickaxePaint(pickaxeId, x, y){
+  const v = PICKAXE_VISUALS[pickaxeId] || PICKAXE_VISUALS.pickaxe_default;
+  ctx.save();
+  ctx.translate(x,y);
+  ctx.strokeStyle = v.handle; ctx.lineWidth = 4; ctx.lineCap='round';
+  ctx.beginPath(); ctx.moveTo(-2,4); ctx.lineTo(13,-9); ctx.stroke();
+  let headFill = v.head;
+  if(v.holo){ const hue=(time*0.12)%360; headFill = `hsl(${hue},80%,55%)`; }
+  ctx.fillStyle = headFill;
+  if(v.glow){ ctx.shadowColor=v.glow; ctx.shadowBlur=6; }
+  ctx.beginPath();
+  ctx.moveTo(13,-9); ctx.lineTo(21,-15); ctx.lineTo(18,-5); ctx.lineTo(9,-3); ctx.closePath();
+  ctx.fill();
+  ctx.shadowBlur = 0;
+  ctx.restore();
+}
+// Menu-card preview icon, mirroring pickaxePaint's real in-game silhouette/colors exactly
+// so a shop/locker card never promises a look the actual pickaxe doesn't have.
+function pickaxeSwatchSvg(id){
+  const v = PICKAXE_VISUALS[id] || PICKAXE_VISUALS.pickaxe_default;
+  let headFill = v.head, defs = '';
+  if(v.holo){
+    defs = `<defs><linearGradient id="pkg-holo-${id}" x1="0" x2="1"><stop offset="0" stop-color="#a855f7"/><stop offset=".5" stop-color="#22d3ee"/><stop offset="1" stop-color="#f472b6"/></linearGradient></defs>`;
+    headFill = `url(#pkg-holo-${id})`;
+  }
+  return `<svg viewBox="0 0 32 32" width="52" height="52">${defs}
+    <line x1="8" y1="27" x2="21" y2="10" stroke="${v.handle}" stroke-width="4" stroke-linecap="round"/>
+    <path d="M21 10 L29 3 L26 14 L16 17 Z" fill="${headFill}"/>
+  </svg>`;
+}
 function drawFighter(f){
   if(!f.alive) return;
   const isP = f===player && !isSpectating;
@@ -5419,7 +5578,10 @@ function drawFighter(f){
   ctx.fill();
   ctx.shadowBlur = 0;
   ctx.strokeStyle = 'rgba(255,255,255,0.55)'; ctx.lineWidth=2; ctx.stroke();
-  weaponSkinPaint(f.weaponSkin, PLAYER_R-4, -4, 20, 8);
+  // A fighter with no ammo in any weapon slot (BR only — every other mode always has
+  // ammo) hasn't found a gun yet, so what's actually in their hand is the pickaxe.
+  if(hasAnyWeapon(f)) weaponSkinPaint(f.weaponSkin, PLAYER_R-4, -4, 20, 8);
+  else pickaxePaint(f.pickaxe, PLAYER_R-6, -2);
   ctx.restore();
 
   if(f.hat && f.hat!=='hat_none'){
